@@ -60,3 +60,12 @@ next-env.d.ts
 /playwright-report
 /.playwright
 .playwright/
+
+# Vercel
+# A regra de env fica só no bloco acima: repeti-la aqui anularia a exceção
+# do .env.example, porque o Git aplica a última regra que casa.
+.vercel
+
+.env*
+.prod-secrets.json
+.env.neon
