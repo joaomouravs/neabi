@@ -18,9 +18,12 @@
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
-    "db:reset": "prisma db push --force-reset && npm run db:seed",
+    "db:reset": "prisma db push --force-reset && npm run db:indices && npm run db:seed",
     "postinstall": "prisma generate",
-    "db:reset-dados": "tsx scripts/reset-dev-data.ts"
+    "db:reset-dados": "tsx scripts/reset-dev-data.ts",
+    "db:indices": "tsx scripts/apply-search-indexes.ts",
+    "db:setup": "npm run db:migrate && npm run db:indices && npm run db:seed",
+    "db:verificar": "tsx scripts/verify-database.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",

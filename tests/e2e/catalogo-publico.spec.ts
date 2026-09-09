@@ -55,18 +55,25 @@ test.describe("catálogo público", () => {
   });
 
   test("a busca ignora acentuação", async ({ page }) => {
-    await page.goto("/acervo?q=etnico");
-    await expect(page.getByText(/obras? encontradas?/)).toBeVisible();
+    /**
+     * A listagem é transmitida dentro de um `Suspense`: a resposta inicial traz
+     * o esqueleto de carregamento e os cartões chegam depois. Contar os
+     * `article` logo após o `goto` é uma corrida — em uma máquina lenta o teste
+     * conta zero e acusa uma regressão de busca que não existe. Daí esperar a
+     * primeira obra aparecer antes de contar, nos dois lados da comparação.
+     */
+    async function contarObras(url: string): Promise<number> {
+      await page.goto(url);
+      const cartoes = page.locator("main ul li article");
+      await cartoes.first().waitFor({ state: "visible" });
+      return cartoes.count();
+    }
 
-    const withoutAccent = await page
-      .locator("main ul li article")
-      .count();
+    const semAcento = await contarObras("/acervo?q=etnico");
+    const comAcento = await contarObras("/acervo?q=étnico");
 
-    await page.goto("/acervo?q=étnico");
-    const withAccent = await page.locator("main ul li article").count();
-
-    expect(withoutAccent).toBeGreaterThan(0);
-    expect(withoutAccent).toBe(withAccent);
+    expect(semAcento).toBeGreaterThan(0);
+    expect(semAcento).toBe(comAcento);
   });
 
   test("filtro por categoria altera os resultados e a URL", async ({ page }) => {

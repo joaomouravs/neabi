@@ -9,6 +9,7 @@ import {
 } from "@/generated/prisma/client";
 import { materialTypeLabels } from "@/config/catalog";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/server/logger";
 import { normalizeText, slugify } from "@/lib/text";
 import { ConflictError, NotFoundError, ValidationError } from "@/server/errors";
 import { slugExists } from "@/server/repositories/book-repository";
@@ -462,7 +463,9 @@ export async function recordBookView(
       }),
     ]);
   } catch (error) {
-    console.error("[analytics] falha ao registrar visualização", error);
+    // Analytics nunca derruba a página da obra: a leitura é o serviço, a
+    // contagem é acessória.
+    logger.warn("Falha ao registrar visualização", { bookId, error });
   }
 }
 
@@ -483,7 +486,7 @@ export async function recordSearchEvent(
       },
     });
   } catch (error) {
-    console.error("[analytics] falha ao registrar busca", error);
+    logger.warn("Falha ao registrar evento de busca", { error });
   }
 }
 

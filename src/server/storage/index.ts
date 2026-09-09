@@ -1,7 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 
+import { env } from "@/server/env";
 import { ValidationError } from "@/server/errors";
 
 /**
@@ -149,6 +150,22 @@ export function sanitizeDisplayName(name: string): string {
 // Driver: sistema de arquivos local
 // ---------------------------------------------------------------------------
 
+/**
+ * Confina um caminho dentro de uma raiz.
+ *
+ * `startsWith(root)` sozinho não basta: com raiz `/dados/uploads`, o caminho
+ * `/dados/uploads-publico/x` passaria na comparação de prefixo e escaparia do
+ * confinamento. Comparar contra `root + separador` (e aceitar a própria raiz)
+ * fecha essa brecha.
+ */
+function dentroDaRaiz(caminhoResolvido: string, raiz: string): boolean {
+  const raizNormalizada = resolve(raiz);
+  return (
+    caminhoResolvido === raizNormalizada ||
+    caminhoResolvido.startsWith(raizNormalizada + sep)
+  );
+}
+
 class LocalStorageProvider implements StorageProvider {
   private readonly root: string;
   private readonly publicBase: string;
@@ -157,14 +174,13 @@ class LocalStorageProvider implements StorageProvider {
     // O diretório de uploads é configurável por ambiente e resolvido em
     // tempo de execução. O comentário impede que o empacotador tente rastrear
     // estaticamente o projeto inteiro a partir deste caminho dinâmico.
+    const config = env();
     this.root = resolve(
       /* turbopackIgnore: true */
       process.cwd(),
-      process.env.STORAGE_LOCAL_DIR ?? "storage/uploads",
+      config.STORAGE_LOCAL_DIR,
     );
-    this.publicBase = (
-      process.env.NEXT_PUBLIC_STORAGE_BASE_URL ?? "/api/arquivos"
-    ).replace(/\/+$/, "");
+    this.publicBase = config.NEXT_PUBLIC_STORAGE_BASE_URL.replace(/\/+$/, "");
   }
 
   async upload({ folder, file }: { folder: string; file: File }) {
@@ -172,7 +188,7 @@ class LocalStorageProvider implements StorageProvider {
     const destination = join(this.root, key);
 
     // Defesa adicional: o destino resolvido precisa continuar dentro da raiz.
-    if (!resolve(destination).startsWith(this.root)) {
+    if (!dentroDaRaiz(resolve(destination), this.root)) {
       throw new ValidationError("Caminho de arquivo inválido.");
     }
 
@@ -189,7 +205,7 @@ class LocalStorageProvider implements StorageProvider {
 
   async delete(key: string): Promise<void> {
     const destination = resolve(join(this.root, key));
-    if (!destination.startsWith(this.root)) return;
+    if (!dentroDaRaiz(destination, this.root)) return;
     await unlink(destination).catch(() => {
       /* já removido */
     });
@@ -199,7 +215,7 @@ class LocalStorageProvider implements StorageProvider {
     const source = resolve(join(this.root, key));
     // O caminho resolvido precisa permanecer dentro da raiz: bloqueia
     // travessia de diretório mesmo se a chave vier adulterada.
-    if (!source.startsWith(this.root)) return null;
+    if (!dentroDaRaiz(source, this.root)) return null;
     return readFile(source).catch(() => null);
   }
 
@@ -218,15 +234,15 @@ class S3StorageProvider implements StorageProvider {
   private readonly publicBase: string;
 
   constructor() {
-    const bucket = process.env.S3_BUCKET;
-    if (!bucket) {
+    const config = env();
+    // A ausência do bucket já é barrada pela validação de ambiente na subida do
+    // servidor; esta checagem é o que dá ao TypeScript a garantia do valor.
+    if (!config.S3_BUCKET) {
       throw new Error('STORAGE_DRIVER="s3" exige a variável S3_BUCKET.');
     }
-    this.bucket = bucket;
+    this.bucket = config.S3_BUCKET;
     this.publicBase = (
-      process.env.S3_PUBLIC_BASE_URL ??
-      process.env.NEXT_PUBLIC_STORAGE_BASE_URL ??
-      ""
+      config.S3_PUBLIC_BASE_URL ?? config.NEXT_PUBLIC_STORAGE_BASE_URL
     ).replace(/\/+$/, "");
   }
 
@@ -238,15 +254,16 @@ class S3StorageProvider implements StorageProvider {
       );
     });
 
+    const config = env();
     return new S3Client({
-      region: process.env.S3_REGION ?? "auto",
-      endpoint: process.env.S3_ENDPOINT,
-      forcePathStyle: Boolean(process.env.S3_ENDPOINT),
+      region: config.S3_REGION ?? "auto",
+      endpoint: config.S3_ENDPOINT,
+      forcePathStyle: Boolean(config.S3_ENDPOINT),
       credentials:
-        process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY
+        config.S3_ACCESS_KEY_ID && config.S3_SECRET_ACCESS_KEY
           ? {
-              accessKeyId: process.env.S3_ACCESS_KEY_ID,
-              secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+              accessKeyId: config.S3_ACCESS_KEY_ID,
+              secretAccessKey: config.S3_SECRET_ACCESS_KEY,
             }
           : undefined,
     });
@@ -308,7 +325,7 @@ let provider: StorageProvider | null = null;
 export function getStorage(): StorageProvider {
   if (provider) return provider;
   provider =
-    process.env.STORAGE_DRIVER === "s3"
+    env().STORAGE_DRIVER === "s3"
       ? new S3StorageProvider()
       : new LocalStorageProvider();
   return provider;

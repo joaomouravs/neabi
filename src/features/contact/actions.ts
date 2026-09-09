@@ -8,6 +8,7 @@ import {
   ValidationError,
   type ActionResult,
 } from "@/server/errors";
+import { logger } from "@/server/logger";
 import { clientFingerprint, enforceRateLimit } from "@/server/rate-limit";
 import { CONTACT_MIN_FILL_MS, contactSchema } from "@/validators/contact";
 
@@ -71,9 +72,10 @@ export async function sendContactMessageAction(
       },
     });
 
-    console.info(
-      `[contato] nova mensagem de ${parsed.data.email}${actor ? ` (usuário ${actor.id})` : ""}`,
-    );
+    logger.info("Nova mensagem de contato", {
+      email: parsed.data.email,
+      userId: actor?.id ?? null,
+    });
 
     return actionOk();
   } catch (error) {

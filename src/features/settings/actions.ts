@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { Shift } from "@/generated/prisma/enums";
 import { requirePermission } from "@/server/auth/session";
+import { audit } from "@/server/logger";
 import {
   actionError,
   actionOk,
@@ -24,7 +25,7 @@ export async function updateSettingsAction(
   formData: FormData,
 ): Promise<ActionResult<undefined>> {
   try {
-    await requirePermission("settings:manage");
+    const actor = await requirePermission("settings:manage");
 
     const parsed = settingsSchema.safeParse({
       libraryName: formData.get("libraryName"),
@@ -79,6 +80,10 @@ export async function updateSettingsAction(
     });
 
     // As configurações aparecem no rodapé de todas as páginas.
+    // As configurações mudam as regras que valem para todo mundo (dias de
+    // atendimento, prazos, limite de reservas): a mudança precisa ser rastreável.
+    audit("configuracoes.atualizadas", { actorId: actor.id });
+
     revalidatePath("/", "layout");
     revalidatePath("/admin/configuracoes");
     return actionOk();

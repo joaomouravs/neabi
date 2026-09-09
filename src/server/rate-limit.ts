@@ -39,12 +39,23 @@ export interface RateLimitOptions {
   windowMs: number;
 }
 
+export interface RateLimitResult {
+  allowed: boolean;
+  retryAfterMs: number;
+}
+
+function enabled(): boolean {
+  return process.env.RATE_LIMIT_ENABLED !== "false";
+}
+
 export function checkRateLimit({
   action,
   subject,
   limit,
   windowMs,
-}: RateLimitOptions): { allowed: boolean; retryAfterMs: number } {
+}: RateLimitOptions): RateLimitResult {
+  if (!enabled()) return { allowed: true, retryAfterMs: 0 };
+
   const now = Date.now();
   sweep(now);
 
@@ -63,14 +74,47 @@ export function checkRateLimit({
   return { allowed: true, retryAfterMs: 0 };
 }
 
-export function enforceRateLimit(options: RateLimitOptions): void {
-  const result = checkRateLimit(options);
-  if (!result.allowed) {
-    const seconds = Math.ceil(result.retryAfterMs / 1000);
-    throw new RateLimitError(
-      `Muitas tentativas. Aguarde ${seconds} segundo${seconds === 1 ? "" : "s"} e tente novamente.`,
-    );
+/**
+ * Consulta o estado da janela sem consumir uma tentativa.
+ *
+ * Existe para que a mesma tentativa não seja contada duas vezes quando dois
+ * pontos do caminho precisam saber do limite: o formulário consulta para dar
+ * uma mensagem clara ("aguarde N segundos"), e o ponto de verificação real —
+ * aquele que também é alcançável sem passar pelo formulário — é quem conta.
+ */
+export function peekRateLimit({
+  action,
+  subject,
+  limit,
+}: Omit<RateLimitOptions, "windowMs">): RateLimitResult {
+  if (!enabled()) return { allowed: true, retryAfterMs: 0 };
+
+  const now = Date.now();
+  const window = hits.get(`${action}:${subject}`);
+  if (!window || window.resetAt <= now) return { allowed: true, retryAfterMs: 0 };
+  if (window.count >= limit) {
+    return { allowed: false, retryAfterMs: window.resetAt - now };
   }
+  return { allowed: true, retryAfterMs: 0 };
+}
+
+export function enforceRateLimit(options: RateLimitOptions): void {
+  assertAllowed(checkRateLimit(options));
+}
+
+/** Aplica o limite sem consumir tentativa — ver `peekRateLimit`. */
+export function enforceRateLimitPeek(
+  options: Omit<RateLimitOptions, "windowMs">,
+): void {
+  assertAllowed(peekRateLimit(options));
+}
+
+function assertAllowed(result: RateLimitResult): void {
+  if (result.allowed) return;
+  const seconds = Math.ceil(result.retryAfterMs / 1000);
+  throw new RateLimitError(
+    `Muitas tentativas. Aguarde ${seconds} segundo${seconds === 1 ? "" : "s"} e tente novamente.`,
+  );
 }
 
 /**

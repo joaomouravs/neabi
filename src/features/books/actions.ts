@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { AssetKind, BookStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
+import { audit } from "@/server/logger";
 import { requirePermission } from "@/server/auth/session";
 import {
   actionError,
@@ -111,9 +112,10 @@ export async function createBookAction(
   let destination: string | null = null;
 
   try {
-    await requirePermission("book:create");
+    const actor = await requirePermission("book:create");
     const data = parseBookForm(formData);
     const book = await createBook(data);
+    audit("acervo.obra_criada", { bookId: book.id, slug: book.slug, actorId: actor.id });
     revalidateBook(book.slug);
     destination = `/admin/acervo/${book.id}`;
   } catch (error) {
@@ -129,13 +131,14 @@ export async function updateBookAction(
   formData: FormData,
 ): Promise<ActionResult<{ id: string; slug: string }>> {
   try {
-    await requirePermission("book:update");
+    const actor = await requirePermission("book:update");
     const id = String(formData.get("id") ?? "");
     if (!id) throw new ValidationError("Obra não identificada.");
 
     const data = parseBookForm(formData);
     const book = await updateBook(id, data);
 
+    audit("acervo.obra_atualizada", { bookId: book.id, actorId: actor.id });
     revalidateBook(book.slug);
     revalidatePath(`/admin/acervo/${id}`);
     return actionOk(book);
@@ -155,7 +158,7 @@ export async function setBookStatusAction(
     }
 
     // Publicar/despublicar e arquivar são permissões distintas.
-    await requirePermission(
+    const actor = await requirePermission(
       status === BookStatus.ARCHIVED ? "book:archive" : "book:publish",
     );
 
@@ -163,6 +166,7 @@ export async function setBookStatusAction(
     if (!id) throw new ValidationError("Obra não identificada.");
 
     await setBookStatus(id, status as BookStatus);
+    audit("acervo.obra_status", { bookId: id, status, actorId: actor.id });
 
     const book = await prisma.book.findUnique({
       where: { id },
@@ -186,11 +190,14 @@ export async function deleteBookAction(
   formData: FormData,
 ): Promise<ActionResult<undefined>> {
   try {
-    await requirePermission("book:delete");
+    const actor = await requirePermission("book:delete");
     const id = String(formData.get("id") ?? "");
     if (!id) throw new ValidationError("Obra não identificada.");
 
     await deleteBook(id);
+    // Exclusão é irreversível: o registro de quem apagou o quê é o único
+    // rastro que sobra da obra.
+    audit("acervo.obra_removida", { bookId: id, actorId: actor.id });
     revalidateBook();
   } catch (error) {
     return actionError(error);
@@ -257,10 +264,19 @@ export async function uploadCoverAction(
       });
     });
 
+    audit("arquivo.enviado", {
+      bookId: book.id,
+      kind: AssetKind.COVER,
+      mimeType: stored.mimeType,
+      size: stored.size,
+      actorId: actor.id,
+    });
+
     revalidateBook(book.slug);
     revalidatePath(`/admin/acervo/${book.id}`);
     return actionOk({ key: stored.key });
   } catch (error) {
+    audit("arquivo.falha", { operacao: "upload_capa", error });
     return actionError(error);
   }
 }
@@ -307,10 +323,19 @@ export async function uploadDocumentAction(
       select: { id: true },
     });
 
+    audit("arquivo.enviado", {
+      bookId: book.id,
+      assetId: asset.id,
+      kind: AssetKind.PDF,
+      size: stored.size,
+      actorId: actor.id,
+    });
+
     revalidateBook(book.slug);
     revalidatePath(`/admin/acervo/${book.id}`);
     return actionOk({ assetId: asset.id });
   } catch (error) {
+    audit("arquivo.falha", { operacao: "upload_documento", error });
     return actionError(error);
   }
 }
@@ -326,7 +351,7 @@ export async function authorizeAssetAction(
   formData: FormData,
 ): Promise<ActionResult<undefined>> {
   try {
-    await requirePermission("asset:authorize");
+    const actor = await requirePermission("asset:authorize");
 
     const parsed = digitalAssetAuthorizationSchema.safeParse({
       assetId: formData.get("assetId"),
@@ -356,6 +381,16 @@ export async function authorizeAssetAction(
     });
 
     await syncDigitalAvailability(asset.bookId);
+
+    // Liberar consulta digital tem implicação de direito autoral: é a decisão
+    // do painel que mais precisa de rastro.
+    audit("arquivo.autorizado", {
+      assetId: asset.id,
+      bookId: asset.bookId,
+      authorized: parsed.data.authorized,
+      downloadAllowed: parsed.data.authorized && parsed.data.downloadAllowed,
+      actorId: actor.id,
+    });
 
     revalidateBook(asset.book.slug);
     revalidatePath(`/admin/acervo/${asset.bookId}`);

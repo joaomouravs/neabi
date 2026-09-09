@@ -1,3 +1,5 @@
+import { logger } from "./logger";
+
 /**
  * Erros de domínio.
  *
@@ -95,8 +97,9 @@ export function actionError(error: unknown): ActionResult<never> {
     };
   }
 
-  // Erros inesperados nunca vazam detalhes para a interface.
-  console.error("[action] erro não tratado:", error);
+  // Erros inesperados nunca vazam detalhes para a interface — mas precisam
+  // aparecer inteiros no log, senão a falha some sem deixar rastro.
+  logger.error("Erro não tratado em Server Action", { error });
   return {
     ok: false,
     error: "Não foi possível concluir a operação. Tente novamente.",

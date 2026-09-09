@@ -197,6 +197,136 @@ describe("criação de reserva", () => {
       createReservation(requesterTwo, "obra-que-nao-existe", formFor("Dois")),
     ).rejects.toThrow(/não encontrada/i);
   });
+
+  it("recusa obra sem nenhum exemplar livre", async () => {
+    const semExemplar = await prisma.book.create({
+      data: {
+        slug: `${PREFIX}-obra-sem-exemplar`,
+        title: "Obra sem exemplar disponível",
+        status: "PUBLISHED",
+        publishedAt: new Date(),
+        searchText: "obra sem exemplar disponivel",
+        copies: {
+          create: {
+            code: `${PREFIX.toUpperCase()}-MANUT-001`,
+            status: CopyStatus.MAINTENANCE,
+          },
+        },
+      },
+      select: { slug: true },
+    });
+
+    await expect(
+      createReservation(requesterTwo, semExemplar.slug, formFor("SemExemplar")),
+    ).rejects.toThrow(/não há exemplar físico disponível/i);
+  });
+
+  it("recusa obra despublicada, mesmo com exemplar livre", async () => {
+    const rascunho = await prisma.book.create({
+      data: {
+        slug: `${PREFIX}-obra-rascunho`,
+        title: "Obra ainda em catalogação",
+        status: "DRAFT",
+        searchText: "obra ainda em catalogacao",
+        copies: {
+          create: {
+            code: `${PREFIX.toUpperCase()}-DRAFT-001`,
+            status: CopyStatus.AVAILABLE,
+          },
+        },
+      },
+      select: { slug: true },
+    });
+
+    await expect(
+      createReservation(requesterTwo, rascunho.slug, formFor("Rascunho")),
+    ).rejects.toThrow(/não encontrada/i);
+  });
+
+  it("aplica o limite de reservas ativas por pessoa", async () => {
+    // Três obras distintas: a regra do limite é por pessoa, não por obra.
+    const obras = await Promise.all(
+      [1, 2, 3, 4].map((n) =>
+        prisma.book.create({
+          data: {
+            slug: `${PREFIX}-limite-${n}`,
+            title: `Obra do limite ${n}`,
+            status: "PUBLISHED",
+            publishedAt: new Date(),
+            searchText: `obra do limite ${n}`,
+            copies: {
+              create: {
+                code: `${PREFIX.toUpperCase()}-LIM-${n}`,
+                status: CopyStatus.AVAILABLE,
+              },
+            },
+          },
+          select: { slug: true },
+        }),
+      ),
+    );
+
+    const pessoa = await prisma.user.create({
+      data: {
+        email: `${PREFIX}-limite@exemplo.test`,
+        name: "Pessoa do limite",
+        role: Role.MEMBER,
+      },
+      select: { id: true, role: true },
+    });
+
+    // maxActiveReservations = 3 nas configurações do teste.
+    for (const obra of obras.slice(0, 3)) {
+      await createReservation(pessoa, obra.slug, formFor("Limite"));
+    }
+
+    await expect(
+      createReservation(pessoa, obras[3].slug, formFor("Limite")),
+    ).rejects.toThrow(/limite de 3 reservas ativas/i);
+  });
+
+  it("grava o histórico na mesma transação que cria a reserva", async () => {
+    const obra = await prisma.book.create({
+      data: {
+        slug: `${PREFIX}-obra-historico`,
+        title: "Obra para conferir o histórico",
+        status: "PUBLISHED",
+        publishedAt: new Date(),
+        searchText: "obra para conferir o historico",
+        copies: {
+          create: {
+            code: `${PREFIX.toUpperCase()}-HIST-001`,
+            status: CopyStatus.AVAILABLE,
+          },
+        },
+      },
+      select: { slug: true },
+    });
+
+    const pessoa = await prisma.user.create({
+      data: {
+        email: `${PREFIX}-historico@exemplo.test`,
+        name: "Pessoa do histórico",
+        role: Role.MEMBER,
+      },
+      select: { id: true, role: true },
+    });
+
+    const criada = await createReservation(pessoa, obra.slug, formFor("Historico"));
+
+    const historico = await prisma.reservationHistory.findMany({
+      where: { reservationId: criada.id },
+      select: { previousStatus: true, newStatus: true, changedById: true },
+    });
+
+    // A origem da solicitação é auditável desde o primeiro instante: se o
+    // histórico fosse gravado depois da transação, uma falha entre as duas
+    // escritas deixaria uma reserva sem registro de como surgiu.
+    expect(historico).toHaveLength(1);
+    expect(historico[0].previousStatus).toBeNull();
+    expect(historico[0].newStatus).toBe(ReservationStatus.PENDING);
+    expect(historico[0].changedById).toBe(pessoa.id);
+  });
 });
 
 describe("alocação de exemplar", () => {

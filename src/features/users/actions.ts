@@ -14,6 +14,7 @@ import {
   ValidationError,
   type ActionResult,
 } from "@/server/errors";
+import { audit } from "@/server/logger";
 import { ACTIVE_STATUSES } from "@/server/services/reservation-rules";
 
 /**
@@ -27,6 +28,11 @@ import { ACTIVE_STATUSES } from "@/server/services/reservation-rules";
 const roleChangeSchema = z.object({
   userId: z.string().min(1),
   role: z.enum(Role),
+});
+
+const activationSchema = z.object({
+  userId: z.string().min(1, "Usuário não identificado.").max(64),
+  active: z.boolean(),
 });
 
 export async function changeUserRoleAction(
@@ -64,6 +70,13 @@ export async function changeUserRoleAction(
       data: { role: parsed.data.role },
     });
 
+    audit("conta.papel_alterado", {
+      userId: target.id,
+      de: target.role,
+      para: parsed.data.role,
+      actorId: actor.id,
+    });
+
     revalidatePath("/admin/usuarios");
     return actionOk();
   } catch (error) {
@@ -78,9 +91,15 @@ export async function setUserActiveAction(
   try {
     const actor = await requirePermission("user:manage");
 
-    const userId = String(formData.get("userId") ?? "");
-    const active = formData.get("active") === "on";
-    if (!userId) throw new ValidationError("Usuário não identificado.");
+    const parsed = activationSchema.safeParse({
+      userId: formData.get("userId"),
+      active: formData.get("active") === "on",
+    });
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      throw new ValidationError(issue.message, String(issue.path[0] ?? ""));
+    }
+    const { userId, active } = parsed.data;
 
     if (userId === actor.id && !active) {
       throw new ConflictError("Você não pode desativar a própria conta.");
@@ -106,6 +125,12 @@ export async function setUserActiveAction(
     }
 
     await prisma.user.update({ where: { id: target.id }, data: { active } });
+
+    audit("conta.ativacao_alterada", {
+      userId: target.id,
+      active,
+      actorId: actor.id,
+    });
 
     revalidatePath("/admin/usuarios");
     return actionOk();

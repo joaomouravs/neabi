@@ -1,3 +1,7 @@
+// O `.env` precisa ser carregado antes de qualquer import que leia
+// `process.env` — as contas do seed vêm de lá, sem valor padrão no código.
+import "dotenv/config";
+
 import { defineConfig, devices } from "@playwright/test";
 
 import { storageStateFor } from "./tests/e2e/accounts";

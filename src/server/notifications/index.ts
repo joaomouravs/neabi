@@ -2,6 +2,9 @@ import { formatDate } from "@/lib/date";
 import { shiftLabels } from "@/config/catalog";
 import type { Shift } from "@/generated/prisma/enums";
 
+import { env } from "@/server/env";
+import { logger } from "@/server/logger";
+
 import { renderReservationEmail } from "./templates";
 
 /**
@@ -51,9 +54,11 @@ export interface MailTransport {
 /** Transporte padrão: apenas registra. Nunca envia nada de fato. */
 class ConsoleTransport implements MailTransport {
   async send(message: EmailMessage): Promise<void> {
-    console.info(
-      `[mail] para=${message.to} assunto="${message.subject}"\n${message.text}`,
-    );
+    logger.info("E-mail (transporte de desenvolvimento — nada foi enviado)", {
+      para: message.to,
+      assunto: message.subject,
+      corpo: message.text,
+    });
   }
 }
 
@@ -73,18 +78,20 @@ class SmtpTransport implements MailTransport {
       );
     }
 
+    const config = env();
+    const port = config.SMTP_PORT ?? 587;
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT ?? 587),
-      secure: Number(process.env.SMTP_PORT ?? 587) === 465,
+      host: config.SMTP_HOST,
+      port,
+      secure: port === 465,
       auth:
-        process.env.SMTP_USER && process.env.SMTP_PASSWORD
-          ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD }
+        config.SMTP_USER && config.SMTP_PASSWORD
+          ? { user: config.SMTP_USER, pass: config.SMTP_PASSWORD }
           : undefined,
     });
 
     await transporter.sendMail({
-      from: process.env.MAIL_FROM ?? "Biblioteca NEABI <nao-responda@localhost>",
+      from: config.MAIL_FROM,
       to: message.to,
       subject: message.subject,
       html: message.html,
@@ -98,9 +105,7 @@ let transport: MailTransport | null = null;
 function getTransport(): MailTransport {
   if (transport) return transport;
   transport =
-    process.env.MAIL_DRIVER === "smtp"
-      ? new SmtpTransport()
-      : new ConsoleTransport();
+    env().MAIL_DRIVER === "smtp" ? new SmtpTransport() : new ConsoleTransport();
   return transport;
 }
 
@@ -146,6 +151,13 @@ export async function notifyReservationEvent(
       text,
     });
   } catch (error) {
-    console.error(`[mail] falha ao notificar "${event}"`, error);
+    // Falha de e-mail não desfaz a operação de negócio, mas também não pode
+    // desaparecer: sem este registro, ninguém saberia que a pessoa não foi
+    // avisada de que a reserva foi aprovada.
+    logger.error("Falha ao enviar notificação de reserva", {
+      evento: event,
+      protocolo: payload.protocol,
+      error,
+    });
   }
 }

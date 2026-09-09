@@ -6,6 +6,10 @@ import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
 import { signIn, signOut } from "@/server/auth";
+import {
+  LOGIN_ACCOUNT_LIMIT,
+  LOGIN_ACCOUNT_SCOPE,
+} from "@/server/auth/config";
 import { requireActor } from "@/server/auth/session";
 import {
   actionError,
@@ -14,7 +18,12 @@ import {
   ValidationError,
   type ActionResult,
 } from "@/server/errors";
-import { clientFingerprint, enforceRateLimit } from "@/server/rate-limit";
+import { audit } from "@/server/logger";
+import {
+  clientFingerprint,
+  enforceRateLimit,
+  enforceRateLimitPeek,
+} from "@/server/rate-limit";
 import {
   changePasswordSchema,
   loginSchema,
@@ -47,16 +56,21 @@ export async function loginAction(
 
     // Dois limites com propósitos distintos.
     //
-    // Por conta: é o que realmente barra força bruta contra uma senha.
+    // Por conta: é o que realmente barra força bruta contra uma senha. A
+    // contagem acontece dentro do `authorize` do Auth.js — único ponto por onde
+    // todo login passa, inclusive um POST direto ao endpoint de credenciais.
+    // Aqui apenas consultamos a janela, sem consumir tentativa, para trocar o
+    // genérico "e-mail ou senha incorretos" por uma mensagem que diz quanto
+    // tempo falta.
+    //
     // Por origem: barra varredura de muitas contas a partir do mesmo lugar, com
     // folga generosa — em uma rede institucional (campus, laboratório, wi-fi
     // compartilhado) todo mundo sai pelo mesmo IP, e um limite apertado aqui
     // deixaria pessoas legítimas de fora.
-    enforceRateLimit({
-      action: "login:conta",
+    enforceRateLimitPeek({
+      action: LOGIN_ACCOUNT_SCOPE,
       subject: parsed.data.email,
-      limit: 8,
-      windowMs: 15 * 60 * 1000,
+      limit: LOGIN_ACCOUNT_LIMIT,
     });
     enforceRateLimit({
       action: "login:origem",
@@ -128,7 +142,7 @@ export async function registerAction(
 
     // O papel NUNCA vem do formulário: toda conta criada publicamente é MEMBER.
     // Promoções acontecem apenas no painel administrativo.
-    await prisma.user.create({
+    const criado = await prisma.user.create({
       data: {
         name: parsed.data.name,
         email: parsed.data.email,
@@ -137,7 +151,10 @@ export async function registerAction(
         patronType: parsed.data.patronType ?? null,
         registrationId: parsed.data.registrationId,
       },
+      select: { id: true },
     });
+
+    audit("conta.criada", { userId: criado.id, role: "MEMBER" });
 
     await signIn("credentials", {
       email: parsed.data.email,
@@ -242,6 +259,8 @@ export async function changePasswordAction(
       where: { id: actor.id },
       data: { passwordHash: await bcrypt.hash(parsed.data.password, 12) },
     });
+
+    audit("conta.senha_alterada", { userId: actor.id });
 
     return actionOk();
   } catch (error) {

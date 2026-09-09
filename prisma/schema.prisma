@@ -290,8 +290,8 @@ model Book {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  publisher    Institution? @relation("BookPublisher", fields: [publisherId], references: [id], onDelete: SetNull)
-  institution  Institution? @relation("BookInstitution", fields: [institutionId], references: [id], onDelete: SetNull)
+  publisher    Institution?      @relation("BookPublisher", fields: [publisherId], references: [id], onDelete: SetNull)
+  institution  Institution?      @relation("BookInstitution", fields: [institutionId], references: [id], onDelete: SetNull)
   contributors BookContributor[]
   categories   BookCategory[]
   tags         BookTag[]
@@ -407,14 +407,14 @@ model Reservation {
 
   status ReservationStatus @default(PENDING)
 
-  adminNote     String?
-  approvedById  String?
-  approvedAt    DateTime?
-  readyAt       DateTime?
+  adminNote      String?
+  approvedById   String?
+  approvedAt     DateTime?
+  readyAt        DateTime?
   pickupDeadline DateTime?
-  pickedUpAt    DateTime?
-  returnedAt    DateTime?
-  cancelledAt   DateTime?
+  pickedUpAt     DateTime?
+  returnedAt     DateTime?
+  cancelledAt    DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -453,19 +453,19 @@ model ReservationHistory {
 // ---------------------------------------------------------------------------
 
 model DigitalAsset {
-  id           String    @id @default(cuid())
-  bookId       String
-  kind         AssetKind
-  storageKey   String    @unique
-  fileName     String
-  mimeType     String
-  size         Int
+  id              String    @id @default(cuid())
+  bookId          String
+  kind            AssetKind
+  storageKey      String    @unique
+  fileName        String
+  mimeType        String
+  size            Int
   // Consulta digital só é liberada com autorização explícita registrada pelo NEABI.
-  authorized      Boolean @default(false)
-  downloadAllowed Boolean @default(false)
+  authorized      Boolean   @default(false)
+  downloadAllowed Boolean   @default(false)
   uploadedById    String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   book       Book  @relation(fields: [bookId], references: [id], onDelete: Cascade)
   uploadedBy User? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
@@ -521,25 +521,25 @@ model Settings {
   address     String @default("")
 
   // Ex.: { "mon": [{"start":"09:00","end":"17:00"}], ... }
-  openingHours Json @default("{}")
+  openingHours    Json    @default("{}")
   // Dias da semana em que há atendimento (0 = domingo … 6 = sábado)
-  serviceDays  Int[] @default([1, 2, 3, 4, 5])
+  serviceDays     Int[]   @default([1, 2, 3, 4, 5])
   // Turnos habilitados para reserva
   availableShifts Shift[] @default([MORNING, AFTERNOON])
 
   // Antecedência mínima (em dias) entre a solicitação e a data desejada.
-  reservationLeadDays Int @default(1)
+  reservationLeadDays    Int @default(1)
   // Janela máxima (em dias) para agendar no futuro.
   reservationHorizonDays Int @default(60)
   // Prazo (em dias) para retirada após o exemplar ficar pronto.
-  pickupDeadlineDays Int @default(3)
+  pickupDeadlineDays     Int @default(3)
   // Limite de reservas ativas simultâneas por usuário.
-  maxActiveReservations Int @default(3)
+  maxActiveReservations  Int @default(3)
 
   reservationInstructions String @default("")
   socialLinks             Json   @default("{}")
 
-  updatedAt DateTime @updatedAt @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 model ContactMessage {

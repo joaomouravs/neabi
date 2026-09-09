@@ -93,24 +93,45 @@ async function seedSettings(): Promise<void> {
   });
 }
 
+/**
+ * Lê uma senha de seed do ambiente.
+ *
+ * Não existe valor padrão de propósito. Uma senha escrita no código é uma
+ * credencial pública: entra no histórico do Git, viaja em cada clone e continua
+ * valendo em qualquer ambiente onde o seed rodar. Falhar aqui, com a instrução
+ * de como gerar, é preferível a criar uma conta administrativa com senha
+ * conhecida por quem tiver acesso ao repositório.
+ */
+function senhaObrigatoria(variavel: string): string {
+  const valor = process.env[variavel];
+  if (!valor || valor.trim().length < 12) {
+    throw new Error(
+      `${variavel} não está definida (ou tem menos de 12 caracteres).\n` +
+        "Defina-a no .env. Para gerar uma senha forte:\n" +
+        `  node -e "console.log(require('node:crypto').randomBytes(12).toString('base64url'))"`,
+    );
+  }
+  return valor;
+}
+
 async function seedUsers(): Promise<void> {
   const accounts = [
     {
       email: (process.env.SEED_ADMIN_EMAIL ?? "admin@neabi.local").toLowerCase(),
       name: process.env.SEED_ADMIN_NAME ?? "Administração NEABI",
-      password: process.env.SEED_ADMIN_PASSWORD ?? "neabi-admin-2026",
+      password: senhaObrigatoria("SEED_ADMIN_PASSWORD"),
       role: "ADMIN" as const,
     },
     {
       email: "editor@neabi.local",
       name: "Equipe de catalogação",
-      password: process.env.SEED_EDITOR_PASSWORD ?? "neabi-editor-2026",
+      password: senhaObrigatoria("SEED_EDITOR_PASSWORD"),
       role: "EDITOR" as const,
     },
     {
       email: "usuario@neabi.local",
       name: "Pessoa usuária de exemplo",
-      password: process.env.SEED_MEMBER_PASSWORD ?? "neabi-usuario-2026",
+      password: senhaObrigatoria("SEED_MEMBER_PASSWORD"),
       role: "MEMBER" as const,
     },
   ];
@@ -126,8 +147,10 @@ async function seedUsers(): Promise<void> {
         passwordHash,
         emailVerified: new Date(),
       },
-      // Senhas existentes não são sobrescritas em execuções posteriores.
-      update: { name: account.name, role: account.role },
+      // A senha do ambiente é a fonte de verdade destas três contas de serviço:
+      // rodar o seed novamente realinha o banco com o `.env`. Sem isso, trocar
+      // uma senha comprometida exigiria mexer no banco à mão.
+      update: { name: account.name, role: account.role, passwordHash },
     });
   }
 }

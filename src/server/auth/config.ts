@@ -5,7 +5,20 @@ import Credentials from "next-auth/providers/credentials";
 
 import { Role } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
+import { audit } from "@/server/logger";
+import { checkRateLimit } from "@/server/rate-limit";
 import { loginSchema } from "@/validators/auth";
+
+/**
+ * Limite de tentativas por conta.
+ *
+ * Exportado porque o formulário de login consulta a mesma janela (sem
+ * consumi-la) apenas para dar uma mensagem melhor: os dois pontos precisam
+ * concordar sobre qual janela é essa.
+ */
+export const LOGIN_ACCOUNT_SCOPE = "login:conta";
+export const LOGIN_ACCOUNT_LIMIT = 8;
+export const LOGIN_ACCOUNT_WINDOW_MS = 15 * 60 * 1000;
 
 /**
  * Configuração do Auth.js.
@@ -37,6 +50,24 @@ export const authConfig: NextAuthConfig = {
         const parsed = loginSchema.safeParse(credentials);
         if (!parsed.success) return null;
 
+        // A limitação de taxa mora AQUI, e não apenas na Server Action do
+        // formulário: `POST /api/auth/callback/credentials` é uma rota pública
+        // do Auth.js e chega até este ponto sem passar por aquela ação. Um
+        // limite implementado só na ação protegeria a tela, não a conta.
+        const bloqueio = checkRateLimit({
+          action: LOGIN_ACCOUNT_SCOPE,
+          subject: parsed.data.email,
+          limit: LOGIN_ACCOUNT_LIMIT,
+          windowMs: LOGIN_ACCOUNT_WINDOW_MS,
+        });
+        if (!bloqueio.allowed) {
+          audit("login.bloqueado", {
+            motivo: "limite_por_conta",
+            retryAfterMs: bloqueio.retryAfterMs,
+          });
+          return null;
+        }
+
         const user = await prisma.user.findUnique({
           where: { email: parsed.data.email },
           select: {
@@ -57,7 +88,20 @@ export const authConfig: NextAuthConfig = {
           "$2b$12$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvalidix";
         const valid = await bcrypt.compare(parsed.data.password, hash);
 
-        if (!user || !user.passwordHash || !user.active || !valid) return null;
+        if (!user || !user.passwordHash || !user.active || !valid) {
+          // Sem e-mail no log: o registro serve para detectar ataque, não para
+          // reconstruir quem tentou entrar em qual conta.
+          audit("login.falha", {
+            motivo: !user
+              ? "conta_inexistente"
+              : !user.active
+                ? "conta_desativada"
+                : "senha_invalida",
+          });
+          return null;
+        }
+
+        audit("login.sucesso", { userId: user.id, role: user.role });
 
         return {
           id: user.id,

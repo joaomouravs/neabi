@@ -149,18 +149,21 @@ npm install
 cp .env.example .env
 ```
 
-Gere um segredo de autenticação e coloque em `AUTH_SECRET`:
+Preencha os segredos internos no `.env` — o servidor recusa subir sem eles:
 
 ```bash
-npx auth secret          # ou: openssl rand -base64 32
+# AUTH_SECRET
+openssl rand -base64 48
+
+# Senhas das três contas do seed (SEED_ADMIN/EDITOR/MEMBER_PASSWORD)
+node -e "console.log(require('node:crypto').randomBytes(12).toString('base64url'))"
 ```
 
 Suba o banco, aplique o schema e semeie o acervo:
 
 ```bash
 npm run db:dev           # deixe rodando em um terminal
-npm run db:push          # em outro terminal
-npm run db:seed
+npm run db:setup         # em outro: migrações + índices + seed
 npm run dev
 ```
 
@@ -168,20 +171,55 @@ Acesse <http://localhost:3000>.
 
 ## Variáveis de ambiente
 
-Todas estão documentadas em `.env.example`. As essenciais:
+Todas estão documentadas em `.env.example`, que é versionado justamente por
+não conter segredo algum. O `.env` está no `.gitignore`.
+
+A configuração é **validada com Zod na subida do servidor** (`src/server/env.ts`,
+chamado por `src/instrumentation.ts`). Uma variável ausente ou incoerente
+derruba o processo com a lista do que falta, em vez de virar um defeito que só
+aparece quando alguém tenta entrar na conta ou enviar um arquivo.
 
 | Variável | Descrição |
 |---|---|
-| `DATABASE_URL` | Conexão PostgreSQL |
-| `AUTH_SECRET` | Segredo de assinatura da sessão — **obrigatório em produção** |
-| `AUTH_URL` | URL pública da aplicação |
+| `DATABASE_URL` | Conexão PostgreSQL — recusada se não começar com `postgres://` |
+| `DIRECT_URL` | Conexão sem pooler, usada pelas migrações |
+| `AUTH_SECRET` | Segredo de assinatura da sessão — mínimo de 32 caracteres |
+| `AUTH_URL` / `AUTH_TRUST_HOST` | URL pública e confiança no host |
 | `NEXT_PUBLIC_SITE_URL` | Usada em metadados, OpenGraph e sitemap |
-| `STORAGE_DRIVER` | `local` ou `s3` |
+| `STORAGE_DRIVER` | `local` ou `s3` (exige `S3_BUCKET` quando `s3`) |
 | `NEXT_PUBLIC_STORAGE_BASE_URL` | Base pública dos arquivos enviados |
-| `MAIL_DRIVER` | `console` (padrão) ou `smtp` |
-| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | Conta administrativa criada pelo seed |
+| `MAIL_DRIVER` | `console` (padrão) ou `smtp` (exige `SMTP_HOST`) |
+| `LOG_LEVEL` | `debug`…`silent`. Padrão por ambiente |
+| `RATE_LIMIT_ENABLED` | Desligar só faz sentido em teste |
+| `CRON_SECRET` | Autentica a rotina de expiração de reservas |
+| `SEED_ADMIN_PASSWORD` etc. | Contas do seed — **sem valor padrão no código** |
 
-Nunca versione segredos reais. O `.env` está no `.gitignore`.
+### Segredos: o que você gera e o que o provedor emite
+
+**Internos — gere localmente:**
+
+```bash
+# AUTH_SECRET
+openssl rand -base64 48
+node -e "console.log(require('node:crypto').randomBytes(48).toString('base64'))"
+
+# CRON_SECRET
+openssl rand -hex 32
+
+# Senhas das contas do seed
+node -e "console.log(require('node:crypto').randomBytes(12).toString('base64url'))"
+```
+
+**Externos — só o provedor emite:** `DATABASE_URL` de um Postgres gerenciado,
+`S3_*`, `SMTP_*`. Ficam vazios até o serviço existir. Um valor inventado não
+vira credencial válida: apenas troca um erro claro ("credencial ausente") por
+um confuso ("credencial rejeitada").
+
+O seed **falha** se `SEED_ADMIN_PASSWORD`, `SEED_EDITOR_PASSWORD` ou
+`SEED_MEMBER_PASSWORD` não estiverem definidas com pelo menos 12 caracteres.
+Não existe senha de reserva no código: uma senha escrita no repositório é uma
+credencial pública, que entra no histórico do Git e continua valendo em
+qualquer ambiente onde o seed rodar.
 
 ## Banco de dados
 
@@ -191,17 +229,32 @@ instalar nada no sistema e sem Docker. Os dados ficam em `.postgres/`
 (ignorado pelo git).
 
 ```bash
-npm run db:dev        # sobe o PostgreSQL local (porta 54329)
-npm run db:push       # sincroniza o schema (desenvolvimento)
-npm run db:migrate    # aplica migrações (produção: prisma migrate deploy)
-npm run db:seed       # popula categorias, contas e o acervo inicial
-npm run db:studio     # inspeciona os dados
-npm run db:reset      # recria o schema e semeia de novo (apaga tudo)
+npm run db:dev         # sobe o PostgreSQL local (porta 54329)
+npm run db:setup       # migrações + índices + seed (do zero, em ordem)
+npm run db:migrate     # aplica migrações (produção: prisma migrate deploy)
+npm run db:indices     # aplica os índices de busca opcionais (pg_trgm)
+npm run db:seed        # popula categorias, contas e o acervo inicial
+npm run db:verificar   # confere conexão, migrações, CRUD e rollback
+npm run db:studio      # inspeciona os dados
+npm run db:push        # sincroniza o schema sem migração (só desenvolvimento)
+npm run db:reset       # recria o schema e semeia de novo (apaga tudo)
 npm run db:reset-dados # limpa reservas, acessos e buscas, preservando o catálogo
 ```
 
 Em produção, aponte `DATABASE_URL` para um PostgreSQL gerenciado e use
-`npm run db:migrate`.
+`npm run db:migrate`. Se o provedor expõe um pooler, defina também
+`DIRECT_URL` com a conexão direta — o pooler não aceita as instruções DDL das
+migrações.
+
+`npm run db:verificar` é a checagem que vale rodar depois de um deploy:
+confirma a conexão, lista as migrações registradas, executa escrita, leitura,
+atualização e exclusão reais, e prova que uma transação com erro no meio não
+deixa nada gravado.
+
+> **Banco criado com `db:push`?** O `_prisma_migrations` fica vazio e
+> `prisma migrate status` acusa a migração como pendente mesmo com o schema
+> correto. Registre a linha de base sem reexecutar nada:
+> `npx prisma migrate resolve --applied 00000000000000_init`.
 
 ### Busca sem depender de extensão
 
@@ -213,10 +266,12 @@ instituição, categorias, assuntos, tags, coleção, ano e ISBN. A consulta apl
 a mesma normalização ao termo digitado.
 
 Para acervos grandes, um índice trigram acelera bastante essa busca. Como
-`pg_trgm` também não está em todo lugar, ele fica fora da migração principal:
+`pg_trgm` também não está em todo lugar, ele fica fora da migração principal —
+uma migração que falha por falta de extensão travaria o deploy inteiro por causa
+de uma otimização. O script aplica o índice quando dá e apenas avisa quando não:
 
 ```bash
-psql "$DATABASE_URL" -f prisma/sql/search-indexes.sql
+npm run db:indices
 ```
 
 ## Seed e acervo inicial
@@ -327,9 +382,19 @@ Cobertura por camada:
 
 - **Unitários** — máquina de estados da reserva, validação de data e turno,
   disponibilidade, normalização de busca, RBAC e schemas Zod.
-- **Integração** — serviço de reservas contra o banco real: transações,
-  alocação atômica de exemplar e a garantia de que dois pedidos concorrentes
-  nunca recebem o mesmo exemplar.
+- **Infraestrutura** — validação do ambiente (banco não-PostgreSQL, segredo
+  ausente ou curto, driver sem as variáveis que ele exige), redação de dados
+  sensíveis no log, limitação de taxa, validação de upload por assinatura
+  binária e confinamento do armazenamento ao diretório de uploads.
+- **Integração** — serviços contra o banco real:
+  - *reservas* — transações, alocação atômica de exemplar, limite por pessoa,
+    obra sem exemplar livre, obra despublicada, histórico gravado na mesma
+    transação e a garantia de que dois pedidos concorrentes nunca recebem o
+    mesmo exemplar;
+  - *catalogação* — criação com autoridades bibliográficas e vínculos numa só
+    transação, resolução de instituição por nome, endereço único, substituição
+    (e não acúmulo) de vínculos na edição, publicação/arquivamento, recusa de
+    exclusão com histórico e a derivação de `digitalAvailable`.
 - **Componentes** — cartão de obra: disponibilidade real, créditos, omissão de
   campos ausentes, títulos longos.
 - **E2E** — em desktop e mobile: fluxo público completo, reserva do pedido à
@@ -338,8 +403,13 @@ Cobertura por camada:
   da pessoa usuária e o painel em 375, 390, 430, 768, 1024, 1280 e 1440 px e
   falha se o documento rolar horizontalmente em qualquer uma delas.
 
-Os testes E2E usam as contas do seed. O projeto `setup` do Playwright autentica
-uma vez por papel e reaproveita a sessão.
+Os testes E2E usam as contas do seed, com as senhas do `.env` — não há
+credencial escrita no código de teste. O projeto `setup` do Playwright
+autentica uma vez por papel e reaproveita a sessão.
+
+Os testes de integração e E2E exigem o banco no ar (`npm run db:dev`) e
+semeado (`npm run db:seed`). Cada arquivo de integração cria e remove os
+próprios registros, identificados por prefixo, sem tocar no acervo semeado.
 
 ```bash
 npx playwright test --project=responsivo   # só a varredura de larguras
@@ -402,6 +472,23 @@ apenas se parece com um erro de permissão.
 `/admin/reservas/[id]` · `/admin/usuarios` · `/admin/arquivos` ·
 `/admin/analytics` · `/admin/configuracoes`
 
+**Rotas de serviço**
+
+| Rota | Descrição |
+|---|---|
+| `GET /api/arquivos/[...key]` | Entrega de arquivos com verificação de autorização |
+| `POST /api/auth/[...nextauth]` | Auth.js |
+| `POST /api/manutencao/expirar-reservas` | Expira reservas com prazo vencido e devolve os exemplares ao acervo. Exige `Authorization: Bearer $CRON_SECRET` |
+
+A rotina de manutenção é para um agendador (cron da hospedagem, GitHub Actions,
+systemd timer). Sem ela, um exemplar reservado por alguém que nunca apareceu
+ficaria indisponível para sempre:
+
+```bash
+curl -X POST https://<host>/api/manutencao/expirar-reservas \
+     -H "Authorization: Bearer $CRON_SECRET"
+```
+
 ## Segurança
 
 - Autorização verificada no servidor em toda ação, por permissão nomeada;
@@ -420,7 +507,33 @@ apenas se parece com um erro de permissão.
 - proteção contra redirecionamento aberto no `callbackUrl`;
 - salvaguardas contra a administração remover o próprio acesso ou deixar o
   sistema sem nenhuma conta administradora;
-- registro de visualizações sem armazenar IP em claro.
+- registro de visualizações sem armazenar IP em claro;
+- configuração validada na subida do servidor: não é possível subir sem segredo
+  de sessão ou com um banco que não seja PostgreSQL;
+- rotina de manutenção (`POST /api/manutencao/expirar-reservas`) autenticada
+  por `CRON_SECRET` com comparação em tempo constante — sem o segredo
+  configurado ela responde 503, porque uma rotina de escrita aberta é pior do
+  que uma rotina que não roda.
+
+> **Onde mora o limite de login.** A contagem por conta acontece dentro do
+> `authorize` do Auth.js, e não na Server Action do formulário. O motivo é
+> concreto: `POST /api/auth/callback/credentials` é uma rota pública que chega
+> ao mesmo ponto sem passar pela ação — um limite implementado só na ação
+> protegeria a tela, não a conta. O formulário apenas *consulta* a janela, sem
+> consumir tentativa, para dizer quanto tempo falta.
+
+### Registro e auditoria
+
+`src/server/logger.ts` produz texto legível em desenvolvimento e JSON por linha
+em produção. Campos sensíveis (`password`, `passwordHash`, `token`, `cookie`,
+`secret`…) são redigidos por nome, em qualquer profundidade — a redação não
+depende de quem chama lembrar de omitir.
+
+Eventos de auditoria (`audit:*`) respondem "quem fez o quê": login e falha de
+login, criação de conta, troca de papel e de ativação, criação e transição de
+reserva, alterações no acervo, envio e autorização de arquivos, e mudança de
+configurações. Registram o identificador de quem agiu — nunca nome, e-mail ou
+senha.
 
 > A limitação de taxa é em memória, por processo — adequada a uma instância. Ao
 > escalar horizontalmente, troque o armazenamento em `src/server/rate-limit.ts`

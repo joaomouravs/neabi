@@ -14,6 +14,7 @@ import {
   NotFoundError,
   ValidationError,
 } from "@/server/errors";
+import { audit } from "@/server/logger";
 import { notifyReservationEvent } from "@/server/notifications";
 import { getSettings } from "@/server/repositories/settings-repository";
 import { can, type Actor } from "@/server/permissions/rbac";
@@ -97,50 +98,56 @@ export async function createReservation(
   });
   if (!book) throw new NotFoundError("Obra não encontrada no acervo.");
 
-  // 3. Limites por usuário.
-  const [activeCount, sameBookActive] = await Promise.all([
-    prisma.reservation.count({
-      where: { userId: actor.id, status: { in: [...ACTIVE_STATUSES] } },
-    }),
-    prisma.reservation.count({
-      where: {
-        userId: actor.id,
-        bookId: book.id,
-        status: { in: [...ACTIVE_STATUSES] },
-      },
-    }),
-  ]);
-
-  if (sameBookActive > 0) {
-    throw new ConflictError(
-      "Você já possui uma solicitação em andamento para esta obra.",
-    );
-  }
-
-  if (activeCount >= settings.maxActiveReservations) {
-    throw new ConflictError(
-      `Você atingiu o limite de ${settings.maxActiveReservations} reservas ativas. Conclua ou cancele uma reserva antes de solicitar outra.`,
-    );
-  }
-
   const location = [settings.institution, settings.campus, settings.address]
     .filter((part) => part && part.length > 0)
     .join(" — ");
 
-  // 4. Registro. A solicitação nasce PENDING: ela ainda não reserva exemplar,
+  // 3. Registro. A solicitação nasce PENDING: ela ainda não reserva exemplar,
   //    porque só a aprovação da equipe compromete o acervo. Ainda assim
   //    exigimos que exista exemplar livre no momento do pedido.
+  //
+  //    Limites, verificação de disponibilidade, criação e histórico acontecem
+  //    na MESMA transação. Contar reservas ativas fora dela seria uma janela de
+  //    corrida real: dois envios simultâneos do formulário leriam a mesma
+  //    contagem e ambos passariam pelo limite. E gravar o histórico depois
+  //    admitiria uma reserva sem registro de origem caso a segunda escrita
+  //    falhasse — exatamente o que a auditoria não pode ter.
   const reservation = await prisma.$transaction(async (tx) => {
-    const availableCopies = await tx.physicalCopy.count({
-      where: { bookId: book.id, status: CopyStatus.AVAILABLE },
-    });
+    const [activeCount, sameBookActive, availableCopies] = await Promise.all([
+      tx.reservation.count({
+        where: { userId: actor.id, status: { in: [...ACTIVE_STATUSES] } },
+      }),
+      tx.reservation.count({
+        where: {
+          userId: actor.id,
+          bookId: book.id,
+          status: { in: [...ACTIVE_STATUSES] },
+        },
+      }),
+      tx.physicalCopy.count({
+        where: { bookId: book.id, status: CopyStatus.AVAILABLE },
+      }),
+    ]);
+
+    if (sameBookActive > 0) {
+      throw new ConflictError(
+        "Você já possui uma solicitação em andamento para esta obra.",
+      );
+    }
+
+    if (activeCount >= settings.maxActiveReservations) {
+      throw new ConflictError(
+        `Você atingiu o limite de ${settings.maxActiveReservations} reservas ativas. Conclua ou cancele uma reserva antes de solicitar outra.`,
+      );
+    }
+
     if (availableCopies === 0) {
       throw new ConflictError(
         "Não há exemplar físico disponível para esta obra no momento.",
       );
     }
 
-    return createWithUniqueProtocol(tx, {
+    const created = await createWithUniqueProtocol(tx, {
       userId: actor.id,
       bookId: book.id,
       fullName: form.fullName,
@@ -152,18 +159,29 @@ export async function createReservation(
       shift: form.shift,
       purpose: form.purpose,
     });
+
+    await tx.reservationHistory.create({
+      data: {
+        reservationId: created.id,
+        previousStatus: null,
+        newStatus: ReservationStatus.PENDING,
+        changedById: actor.id,
+        note: "Solicitação registrada pelo formulário público.",
+      },
+    });
+
+    return created;
   });
 
-  await prisma.reservationHistory.create({
-    data: {
-      reservationId: reservation.id,
-      previousStatus: null,
-      newStatus: ReservationStatus.PENDING,
-      changedById: actor.id,
-      note: "Solicitação registrada pelo formulário público.",
-    },
+  audit("reserva.criada", {
+    reservationId: reservation.id,
+    protocol: reservation.protocol,
+    userId: actor.id,
+    bookId: book.id,
   });
 
+  // O e-mail sai FORA da transação, e de propósito: uma falha de rede do
+  // provedor não pode desfazer uma reserva já confirmada no banco.
   await notifyReservationEvent("reservation_requested", {
     protocol: reservation.protocol,
     recipientName: form.fullName,
@@ -359,6 +377,14 @@ export async function transitionReservation(
     return { reservation, pickupDeadline: pickupDeadline ?? null };
   });
 
+  audit("reserva.transicao", {
+    reservationId: outcome.reservation.id,
+    protocol: outcome.reservation.protocol,
+    de: outcome.reservation.status,
+    para: targetStatus,
+    actorId: actor.id,
+  });
+
   const event = EVENT_BY_STATUS[targetStatus];
   if (event) {
     const location = [settings.institution, settings.campus, settings.address]
@@ -468,12 +494,24 @@ export async function expireOverdueReservations(
     select: { id: true, copyId: true },
   });
 
+  let expiradas = 0;
+
   for (const reservation of overdue) {
     await prisma.$transaction(async (tx) => {
-      await tx.reservation.update({
-        where: { id: reservation.id },
+      // Condicional ao estado lido: entre a consulta acima e esta escrita, a
+      // pessoa pode ter aparecido no balcão e a equipe registrado a retirada.
+      // Sem o `where` por status, a rotina sobrescreveria PICKED_UP com EXPIRED
+      // e devolveria ao acervo um exemplar que está na mão de alguém.
+      const aplicada = await tx.reservation.updateMany({
+        where: {
+          id: reservation.id,
+          status: ReservationStatus.READY_FOR_PICKUP,
+        },
         data: { status: ReservationStatus.EXPIRED },
       });
+      if (aplicada.count === 0) return;
+      expiradas += 1;
+
       if (reservation.copyId) {
         await tx.physicalCopy.updateMany({
           where: {
@@ -494,5 +532,12 @@ export async function expireOverdueReservations(
     });
   }
 
-  return overdue.length;
+  if (expiradas > 0) {
+    audit("reserva.transicao", {
+      motivo: "prazo_de_retirada_vencido",
+      quantidade: expiradas,
+    });
+  }
+
+  return expiradas;
 }
