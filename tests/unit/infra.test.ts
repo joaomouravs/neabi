@@ -111,6 +111,27 @@ describe("validação do ambiente", () => {
     expect(() => env()).not.toThrow();
   });
 
+  it('exige token quando o armazenamento é "blob"', async () => {
+    process.env.STORAGE_DRIVER = "blob";
+    delete process.env.BLOB_READ_WRITE_TOKEN;
+    const env = await carregar();
+    expect(() => env()).toThrow(/BLOB_READ_WRITE_TOKEN/);
+  });
+
+  it('aceita o armazenamento "blob" com o token presente', async () => {
+    process.env.STORAGE_DRIVER = "blob";
+    process.env.BLOB_READ_WRITE_TOKEN = "vercel_blob_rw_exemplo";
+    const env = await carregar();
+    expect(() => env()).not.toThrow();
+    expect(env().STORAGE_DRIVER).toBe("blob");
+  });
+
+  it("recusa driver de armazenamento desconhecido", async () => {
+    process.env.STORAGE_DRIVER = "ftp";
+    const env = await carregar();
+    expect(() => env()).toThrow(/STORAGE_DRIVER/);
+  });
+
   it('exige servidor quando o e-mail é "smtp"', async () => {
     process.env.MAIL_DRIVER = "smtp";
     delete process.env.SMTP_HOST;

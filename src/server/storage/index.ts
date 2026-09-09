@@ -8,10 +8,16 @@ import { ValidationError } from "@/server/errors";
 /**
  * Armazenamento de arquivos.
  *
- * Interface única para capas e PDFs. Em desenvolvimento grava no disco; em
- * produção, em qualquer serviço compatível com S3 (Cloudflare R2, Amazon S3,
- * Supabase Storage, MinIO). Nenhum serviço acima desta camada sabe qual driver
- * está ativo.
+ * Interface única para capas e PDFs. Três drivers a implementam:
+ *
+ *  - `local` — disco, para desenvolvimento;
+ *  - `blob`  — Vercel Blob, para quem hospeda na Vercel;
+ *  - `s3`    — qualquer serviço compatível com S3 (R2, Amazon S3, Supabase,
+ *              MinIO), para quem hospeda em outro lugar.
+ *
+ * Nenhum serviço acima desta camada sabe qual driver está ativo. Todos
+ * devolvem a mesma forma de chave, então trocar de armazenamento não invalida
+ * os `DigitalAsset` já gravados — só exige mover os arquivos.
  */
 
 export interface StoredFile {
@@ -226,6 +232,95 @@ class LocalStorageProvider implements StorageProvider {
 }
 
 // ---------------------------------------------------------------------------
+// Driver: Vercel Blob
+// ---------------------------------------------------------------------------
+
+/**
+ * Armazenamento no Vercel Blob.
+ *
+ * Existe porque o driver local não funciona em produção na Vercel: o sistema de
+ * arquivos da função é somente-leitura, e um upload falharia ao criar o
+ * diretório de destino.
+ *
+ * Duas decisões que valem explicação:
+ *
+ * **Tudo é gravado como privado.** Poderia ser tentador publicar as capas
+ * direto no CDN do Blob — elas são públicas de qualquer forma. Mas isso criaria
+ * dois caminhos de saída para os arquivos do acervo: um pela rota que confere
+ * autorização e outro sem conferência nenhuma. Um PDF cadastrado por engano com
+ * a visibilidade errada passaria a ser acessível por URL, que é exatamente a
+ * garantia que este projeto não pode perder. Com tudo privado, `/api/arquivos`
+ * continua sendo a única porta, e é ela que decide o que sai.
+ *
+ * O custo disso é uma invocação de função por arquivo — mitigado porque a rota
+ * marca capa como `immutable` por um ano, então o CDN da Vercel serve as
+ * repetições. Se o acervo crescer a ponto de isso pesar, o caminho é publicar
+ * as capas (e só elas) no CDN, ajustando `images.remotePatterns` e a CSP.
+ *
+ * **A chave é o `pathname`.** O SDK aceita pathname em `get` e `del`, então a
+ * mesma chave que o driver local usa serve aqui — `DigitalAsset.storageKey`
+ * não muda de forma conforme o driver, e trocar de armazenamento não invalida
+ * os registros já gravados.
+ */
+class VercelBlobStorageProvider implements StorageProvider {
+  private readonly publicBase: string;
+
+  constructor() {
+    const config = env();
+    if (!config.BLOB_READ_WRITE_TOKEN) {
+      throw new Error(
+        'STORAGE_DRIVER="blob" exige BLOB_READ_WRITE_TOKEN. ' +
+          "Crie a store com: vercel blob create-store <nome> --access private",
+      );
+    }
+    this.publicBase = config.NEXT_PUBLIC_STORAGE_BASE_URL.replace(/\/+$/, "");
+  }
+
+  async upload({ folder, file }: { folder: string; file: File }) {
+    const { put } = await import("@vercel/blob");
+    const key = buildStorageKey(folder, file.type);
+
+    // `addRandomSuffix: false` é essencial: `buildStorageKey` já gera um UUID,
+    // e um sufixo do serviço faria o pathname devolvido divergir da chave que
+    // gravamos no banco — leitura e remoção passariam a não encontrar o arquivo.
+    await put(key, file, {
+      access: "private",
+      addRandomSuffix: false,
+      contentType: file.type,
+    });
+
+    return {
+      key,
+      fileName: sanitizeDisplayName(file.name),
+      mimeType: file.type,
+      size: file.size,
+    };
+  }
+
+  async delete(key: string): Promise<void> {
+    const { del } = await import("@vercel/blob");
+    // Remoção de arquivo já ausente não é erro: o efeito desejado é o mesmo.
+    await del(key).catch(() => undefined);
+  }
+
+  async read(key: string): Promise<Buffer | null> {
+    const { get } = await import("@vercel/blob");
+    try {
+      const result = await get(key, { access: "private" });
+      if (!result || result.statusCode !== 200 || !result.stream) return null;
+      return Buffer.from(await new Response(result.stream).arrayBuffer());
+    } catch {
+      return null;
+    }
+  }
+
+  getUrl(key: string): string {
+    if (key.startsWith("/") || key.startsWith("http")) return key;
+    return `${this.publicBase}/${key}`;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Driver: S3 / R2 / Supabase Storage
 // ---------------------------------------------------------------------------
 
@@ -324,10 +419,13 @@ let provider: StorageProvider | null = null;
 
 export function getStorage(): StorageProvider {
   if (provider) return provider;
+  const driver = env().STORAGE_DRIVER;
   provider =
-    env().STORAGE_DRIVER === "s3"
+    driver === "s3"
       ? new S3StorageProvider()
-      : new LocalStorageProvider();
+      : driver === "blob"
+        ? new VercelBlobStorageProvider()
+        : new LocalStorageProvider();
   return provider;
 }
 

@@ -62,7 +62,7 @@ const baseSchema = z.object({
   // ---------------------------------------------------------------------------
   // Armazenamento
   // ---------------------------------------------------------------------------
-  STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
+  STORAGE_DRIVER: z.enum(["local", "s3", "blob"]).default("local"),
   STORAGE_LOCAL_DIR: z.string().trim().default("storage/uploads"),
   NEXT_PUBLIC_STORAGE_BASE_URL: z.string().trim().default("/api/arquivos"),
 
@@ -72,6 +72,9 @@ const baseSchema = z.object({
   S3_ACCESS_KEY_ID: z.string().trim().optional(),
   S3_SECRET_ACCESS_KEY: z.string().trim().optional(),
   S3_PUBLIC_BASE_URL: z.string().trim().optional(),
+
+  /** Injetada pela Vercel ao vincular uma store do Blob ao projeto. */
+  BLOB_READ_WRITE_TOKEN: z.string().trim().optional(),
 
   // ---------------------------------------------------------------------------
   // E-mail
@@ -109,6 +112,15 @@ const schema = baseSchema.superRefine((value, ctx) => {
       path: ["S3_BUCKET"],
       message:
         'STORAGE_DRIVER="s3" exige S3_BUCKET (e as credenciais do provedor).',
+    });
+  }
+
+  if (value.STORAGE_DRIVER === "blob" && !value.BLOB_READ_WRITE_TOKEN) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["BLOB_READ_WRITE_TOKEN"],
+      message:
+        'STORAGE_DRIVER="blob" exige BLOB_READ_WRITE_TOKEN. Crie a store com: vercel blob create-store <nome> --access private',
     });
   }
 
