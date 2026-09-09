@@ -340,8 +340,30 @@ Contas criadas pelo seed (desenvolvimento):
 `StorageProvider` (`src/server/storage/`) abstrai o destino dos arquivos:
 
 - **`local`** (padrão): grava em `storage/uploads/`, **fora de `public/`**;
+- **`blob`**: Vercel Blob — a opção para quem hospeda na Vercel;
 - **`s3`**: qualquer serviço compatível — Cloudflare R2, Amazon S3, MinIO,
   Supabase Storage.
+
+Os três devolvem chaves da mesma forma, então trocar de armazenamento não
+invalida os `DigitalAsset` já gravados — só exige mover os arquivos.
+
+> **Na Vercel, `local` não serve.** O sistema de arquivos da função é
+> somente-leitura: o upload falha ao criar o diretório de destino e a pessoa
+> recebe um erro genérico no painel. Use `blob`:
+>
+> ```bash
+> vercel blob create-store <nome> --access private --yes
+> ```
+>
+> A store é privada **de propósito**. Publicar as capas direto no CDN seria mais
+> rápido — elas são públicas de qualquer forma —, mas criaria dois caminhos de
+> saída para os arquivos do acervo: um pela rota que confere autorização e outro
+> sem conferência nenhuma. Um PDF cadastrado com a visibilidade errada passaria a
+> ser acessível por URL. Com a store privada, `/api/arquivos` é a única porta, e
+> uma tentativa de acesso direto ao Blob responde 403.
+>
+> O custo é uma invocação de função por arquivo, mitigado porque a rota marca
+> capa como `immutable` por um ano e o CDN serve as repetições.
 
 Arquivos enviados nunca são servidos como estáticos. Eles passam por
 `/api/arquivos/[...key]`, que resolve a chave no banco e verifica a autorização
