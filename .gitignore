@@ -39,3 +39,22 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Banco de desenvolvimento embarcado (PGlite)
+/.pglite
+
+# Cliente Prisma gerado
+/src/generated
+
+# Uploads locais do StorageProvider (fora de /public: acesso passa pela rota
+# autorizada em /api/arquivos)
+/storage
+
+# Cluster PostgreSQL de desenvolvimento
+/.postgres
+
+# Playwright
+/test-results
+/playwright-report
+/.playwright
+.playwright/

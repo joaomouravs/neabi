@@ -1,0 +1,326 @@
+import { createHash, randomUUID } from "node:crypto";
+import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
+
+import { ValidationError } from "@/server/errors";
+
+/**
+ * Armazenamento de arquivos.
+ *
+ * Interface única para capas e PDFs. Em desenvolvimento grava no disco; em
+ * produção, em qualquer serviço compatível com S3 (Cloudflare R2, Amazon S3,
+ * Supabase Storage, MinIO). Nenhum serviço acima desta camada sabe qual driver
+ * está ativo.
+ */
+
+export interface StoredFile {
+  key: string;
+  fileName: string;
+  mimeType: string;
+  size: number;
+}
+
+export interface StorageProvider {
+  upload(input: {
+    /** Pasta lógica, ex.: "capas" ou "documentos". */
+    folder: string;
+    file: File;
+  }): Promise<StoredFile>;
+  delete(key: string): Promise<void>;
+  /** Lê o conteúdo do arquivo. Usado pela rota que verifica autorização. */
+  read(key: string): Promise<Buffer | null>;
+  getUrl(key: string): string;
+}
+
+// ---------------------------------------------------------------------------
+// Validação de arquivo
+// ---------------------------------------------------------------------------
+
+export const IMAGE_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/avif",
+] as const;
+
+export const DOCUMENT_MIME_TYPES = ["application/pdf"] as const;
+
+export const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB
+export const MAX_DOCUMENT_BYTES = 60 * 1024 * 1024; // 60 MB
+
+const EXTENSION_BY_MIME: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/avif": "avif",
+  "application/pdf": "pdf",
+};
+
+/**
+ * Valida tipo e tamanho antes de qualquer escrita.
+ *
+ * O `type` declarado pelo navegador não é confiável sozinho, então também
+ * conferimos a assinatura binária do arquivo (magic bytes). Um `.php`
+ * renomeado para `.jpg` é rejeitado aqui.
+ */
+export async function assertValidUpload(
+  file: File,
+  options: { allowed: readonly string[]; maxBytes: number },
+): Promise<void> {
+  if (file.size === 0) {
+    throw new ValidationError("O arquivo enviado está vazio.");
+  }
+  if (file.size > options.maxBytes) {
+    const megabytes = Math.floor(options.maxBytes / (1024 * 1024));
+    throw new ValidationError(
+      `O arquivo excede o limite de ${megabytes} MB.`,
+    );
+  }
+  if (!options.allowed.includes(file.type)) {
+    throw new ValidationError("Formato de arquivo não permitido.");
+  }
+
+  const signature = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  if (!matchesSignature(signature, file.type)) {
+    throw new ValidationError(
+      "O conteúdo do arquivo não corresponde ao formato declarado.",
+    );
+  }
+}
+
+function matchesSignature(bytes: Uint8Array, mimeType: string): boolean {
+  const startsWith = (...expected: number[]) =>
+    expected.every((byte, index) => bytes[index] === byte);
+
+  switch (mimeType) {
+    case "image/jpeg":
+      return startsWith(0xff, 0xd8, 0xff);
+    case "image/png":
+      return startsWith(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a);
+    case "application/pdf":
+      return startsWith(0x25, 0x50, 0x44, 0x46); // %PDF
+    case "image/webp":
+      // "RIFF" .... "WEBP"
+      return (
+        startsWith(0x52, 0x49, 0x46, 0x46) &&
+        bytes[8] === 0x57 &&
+        bytes[9] === 0x45 &&
+        bytes[10] === 0x42 &&
+        bytes[11] === 0x50
+      );
+    case "image/avif":
+      // Caixa "ftyp" na posição 4.
+      return (
+        bytes[4] === 0x66 &&
+        bytes[5] === 0x74 &&
+        bytes[6] === 0x79 &&
+        bytes[7] === 0x70
+      );
+    default:
+      return false;
+  }
+}
+
+/**
+ * Nome de arquivo seguro.
+ *
+ * O nome enviado nunca vira caminho: geramos um identificador aleatório e
+ * mantemos a extensão derivada do tipo MIME já validado. Isso elimina de uma
+ * vez travessia de diretório, colisão e caracteres problemáticos.
+ */
+export function buildStorageKey(folder: string, mimeType: string): string {
+  const safeFolder = folder.replace(/[^a-z0-9-]/gi, "").slice(0, 40) || "arquivos";
+  const extension = EXTENSION_BY_MIME[mimeType] ?? "bin";
+  return `${safeFolder}/${randomUUID()}.${extension}`;
+}
+
+/** Nome original higienizado, guardado apenas para exibição. */
+export function sanitizeDisplayName(name: string): string {
+  return (
+    name
+      .replace(/[\\/]/g, "-")
+      .replace(/[^\w.\- ]/g, "")
+      .trim()
+      .slice(0, 120) || "arquivo"
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Driver: sistema de arquivos local
+// ---------------------------------------------------------------------------
+
+class LocalStorageProvider implements StorageProvider {
+  private readonly root: string;
+  private readonly publicBase: string;
+
+  constructor() {
+    // O diretório de uploads é configurável por ambiente e resolvido em
+    // tempo de execução. O comentário impede que o empacotador tente rastrear
+    // estaticamente o projeto inteiro a partir deste caminho dinâmico.
+    this.root = resolve(
+      /* turbopackIgnore: true */
+      process.cwd(),
+      process.env.STORAGE_LOCAL_DIR ?? "storage/uploads",
+    );
+    this.publicBase = (
+      process.env.NEXT_PUBLIC_STORAGE_BASE_URL ?? "/api/arquivos"
+    ).replace(/\/+$/, "");
+  }
+
+  async upload({ folder, file }: { folder: string; file: File }) {
+    const key = buildStorageKey(folder, file.type);
+    const destination = join(this.root, key);
+
+    // Defesa adicional: o destino resolvido precisa continuar dentro da raiz.
+    if (!resolve(destination).startsWith(this.root)) {
+      throw new ValidationError("Caminho de arquivo inválido.");
+    }
+
+    await mkdir(dirname(destination), { recursive: true });
+    await writeFile(destination, Buffer.from(await file.arrayBuffer()));
+
+    return {
+      key,
+      fileName: sanitizeDisplayName(file.name),
+      mimeType: file.type,
+      size: file.size,
+    };
+  }
+
+  async delete(key: string): Promise<void> {
+    const destination = resolve(join(this.root, key));
+    if (!destination.startsWith(this.root)) return;
+    await unlink(destination).catch(() => {
+      /* já removido */
+    });
+  }
+
+  async read(key: string): Promise<Buffer | null> {
+    const source = resolve(join(this.root, key));
+    // O caminho resolvido precisa permanecer dentro da raiz: bloqueia
+    // travessia de diretório mesmo se a chave vier adulterada.
+    if (!source.startsWith(this.root)) return null;
+    return readFile(source).catch(() => null);
+  }
+
+  getUrl(key: string): string {
+    if (key.startsWith("/") || key.startsWith("http")) return key;
+    return `${this.publicBase}/${key}`;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Driver: S3 / R2 / Supabase Storage
+// ---------------------------------------------------------------------------
+
+class S3StorageProvider implements StorageProvider {
+  private readonly bucket: string;
+  private readonly publicBase: string;
+
+  constructor() {
+    const bucket = process.env.S3_BUCKET;
+    if (!bucket) {
+      throw new Error('STORAGE_DRIVER="s3" exige a variável S3_BUCKET.');
+    }
+    this.bucket = bucket;
+    this.publicBase = (
+      process.env.S3_PUBLIC_BASE_URL ??
+      process.env.NEXT_PUBLIC_STORAGE_BASE_URL ??
+      ""
+    ).replace(/\/+$/, "");
+  }
+
+  /** Carregado sob demanda para não pesar o bundle no driver local. */
+  private async client() {
+    const { S3Client } = await import("@aws-sdk/client-s3").catch(() => {
+      throw new Error(
+        'STORAGE_DRIVER="s3" exige a dependência `@aws-sdk/client-s3`. Instale-a com: npm install @aws-sdk/client-s3',
+      );
+    });
+
+    return new S3Client({
+      region: process.env.S3_REGION ?? "auto",
+      endpoint: process.env.S3_ENDPOINT,
+      forcePathStyle: Boolean(process.env.S3_ENDPOINT),
+      credentials:
+        process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY
+          ? {
+              accessKeyId: process.env.S3_ACCESS_KEY_ID,
+              secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+            }
+          : undefined,
+    });
+  }
+
+  async upload({ folder, file }: { folder: string; file: File }) {
+    const { PutObjectCommand } = await import("@aws-sdk/client-s3");
+    const key = buildStorageKey(folder, file.type);
+
+    const client = await this.client();
+    await client.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: Buffer.from(await file.arrayBuffer()),
+        ContentType: file.type,
+        CacheControl: "public, max-age=31536000, immutable",
+      }),
+    );
+
+    return {
+      key,
+      fileName: sanitizeDisplayName(file.name),
+      mimeType: file.type,
+      size: file.size,
+    };
+  }
+
+  async delete(key: string): Promise<void> {
+    const { DeleteObjectCommand } = await import("@aws-sdk/client-s3");
+    const client = await this.client();
+    await client.send(
+      new DeleteObjectCommand({ Bucket: this.bucket, Key: key }),
+    );
+  }
+
+  async read(key: string): Promise<Buffer | null> {
+    const { GetObjectCommand } = await import("@aws-sdk/client-s3");
+    const client = await this.client();
+    try {
+      const result = await client.send(
+        new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+      );
+      const bytes = await result.Body?.transformToByteArray();
+      return bytes ? Buffer.from(bytes) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  getUrl(key: string): string {
+    if (key.startsWith("/") || key.startsWith("http")) return key;
+    return `${this.publicBase}/${key}`;
+  }
+}
+
+let provider: StorageProvider | null = null;
+
+export function getStorage(): StorageProvider {
+  if (provider) return provider;
+  provider =
+    process.env.STORAGE_DRIVER === "s3"
+      ? new S3StorageProvider()
+      : new LocalStorageProvider();
+  return provider;
+}
+
+/** Injeção para testes. */
+export function setStorage(custom: StorageProvider | null): void {
+  provider = custom;
+}
+
+/** Hash do conteúdo — usado para detectar reenvio do mesmo arquivo. */
+export async function fileChecksum(file: File): Promise<string> {
+  const buffer = Buffer.from(await file.arrayBuffer());
+  return createHash("sha256").update(buffer).digest("hex").slice(0, 32);
+}

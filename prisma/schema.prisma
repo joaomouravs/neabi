@@ -1,0 +1,555 @@
+// Biblioteca NEABI — modelagem de dados
+// NEABI — Núcleo de Estudos Afro-Brasileiros e Indígenas — CEFET/RJ, campus Nova Iguaçu
+//
+// Princípios:
+// - Metadados bibliográficos são opcionais por natureza: catalogação é incremental.
+//   Campos desconhecidos permanecem `null`. Nunca preenchidos com dados inventados.
+// - Disponibilidade física NUNCA é um boolean no livro: deriva de PhysicalCopy.
+// - Disponibilidade digital só é verdadeira quando existe DigitalAsset autorizado.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  EDITOR
+  MEMBER
+}
+
+enum BookStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum MaterialType {
+  BOOK
+  BOOKLET
+  REPORT
+  PLAN
+  ACADEMIC_PUBLICATION
+  INSTITUTIONAL_PUBLICATION
+  RESEARCH
+  OTHER
+}
+
+enum CatalogingStatus {
+  NEEDS_REVIEW
+  VERIFIED
+}
+
+enum ContributorRole {
+  AUTHOR
+  ORGANIZER
+  EDITOR
+  CONTRIBUTOR
+  TRANSLATOR
+}
+
+enum CopyStatus {
+  AVAILABLE
+  RESERVED
+  IN_USE
+  UNAVAILABLE
+  MAINTENANCE
+  LOST
+}
+
+enum CopyCondition {
+  NEW
+  GOOD
+  FAIR
+  POOR
+}
+
+enum ReservationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  READY_FOR_PICKUP
+  PICKED_UP
+  RETURNED
+  CANCELLED
+  EXPIRED
+}
+
+enum Shift {
+  MORNING
+  AFTERNOON
+  EVENING
+}
+
+enum PatronType {
+  STUDENT
+  PROFESSOR
+  STAFF
+  RESEARCHER
+  VISITOR
+  EXTERNAL_COMMUNITY
+  OTHER
+}
+
+enum AssetKind {
+  COVER
+  PDF
+  DOCUMENT
+}
+
+enum ContactStatus {
+  NEW
+  READ
+  ANSWERED
+  ARCHIVED
+}
+
+// ---------------------------------------------------------------------------
+// Autenticação / usuários (Auth.js)
+// ---------------------------------------------------------------------------
+
+model User {
+  id             String      @id @default(cuid())
+  name           String?
+  email          String      @unique
+  emailVerified  DateTime?
+  image          String?
+  passwordHash   String?
+  role           Role        @default(MEMBER)
+  phone          String?
+  registrationId String? // matrícula ou vínculo institucional
+  patronType     PatronType?
+  active         Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  accounts            Account[]
+  sessions            Session[]
+  reservations        Reservation[]        @relation("ReservationOwner")
+  approvedReservation Reservation[]        @relation("ReservationApprover")
+  historyEntries      ReservationHistory[]
+  uploadedAssets      DigitalAsset[]
+  views               BookView[]
+  searches            SearchEvent[]
+
+  @@index([role])
+  @@index([createdAt])
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  sessionToken String   @id
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+// ---------------------------------------------------------------------------
+// Autoridades bibliográficas
+// ---------------------------------------------------------------------------
+
+model Person {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  bio       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contributions BookContributor[]
+
+  @@index([name])
+}
+
+model Institution {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  acronym   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  publishedBooks Book[] @relation("BookPublisher")
+  affiliations   Book[] @relation("BookInstitution")
+
+  @@index([name])
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  sortOrder   Int      @default(0)
+  featured    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  books BookCategory[]
+
+  @@index([featured, sortOrder])
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  books BookTag[]
+}
+
+model Subject {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  books BookSubject[]
+}
+
+// ---------------------------------------------------------------------------
+// Acervo
+// ---------------------------------------------------------------------------
+
+model Book {
+  id       String  @id @default(cuid())
+  slug     String  @unique
+  title    String
+  subtitle String?
+
+  // Metadados bibliográficos — todos opcionais, nunca inventados.
+  publisherId   String?
+  institutionId String?
+  collection    String? // coleção / série
+  year          Int?
+  edition       String?
+  language      String?
+  pages         Int?
+  isbn          String?
+
+  materialType     MaterialType     @default(BOOK)
+  catalogingStatus CatalogingStatus @default(NEEDS_REVIEW)
+
+  description String?
+  summary     String?
+  notes       String?
+
+  coverImage String? // chave no StorageProvider (ex.: acervo/capas/slug.jpg)
+  coverAlt   String?
+
+  // Disponibilidade digital: mantida pelo serviço a partir de DigitalAsset autorizado.
+  // Nunca definida manualmente como `true` sem arquivo autorizado cadastrado.
+  digitalAvailable Boolean @default(false)
+
+  status      BookStatus @default(DRAFT)
+  featured    Boolean    @default(false)
+  viewCount   Int        @default(0)
+  publishedAt DateTime?
+
+  // Texto normalizado (minúsculas, sem acentos) para busca tolerante a diacríticos.
+  searchText String @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  publisher    Institution? @relation("BookPublisher", fields: [publisherId], references: [id], onDelete: SetNull)
+  institution  Institution? @relation("BookInstitution", fields: [institutionId], references: [id], onDelete: SetNull)
+  contributors BookContributor[]
+  categories   BookCategory[]
+  tags         BookTag[]
+  subjects     BookSubject[]
+  copies       PhysicalCopy[]
+  reservations Reservation[]
+  assets       DigitalAsset[]
+  views        BookView[]
+
+  @@index([status, publishedAt])
+  @@index([status, featured])
+  @@index([title])
+  @@index([year])
+  @@index([viewCount])
+  @@index([createdAt])
+  @@index([catalogingStatus])
+}
+
+model BookContributor {
+  id        String          @id @default(cuid())
+  bookId    String
+  personId  String
+  role      ContributorRole @default(AUTHOR)
+  sortOrder Int             @default(0)
+
+  book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, personId, role])
+  @@index([personId])
+  @@index([bookId, sortOrder])
+}
+
+model BookCategory {
+  bookId     String
+  categoryId String
+
+  book     Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, categoryId])
+  @@index([categoryId])
+}
+
+model BookTag {
+  bookId String
+  tagId  String
+
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, tagId])
+  @@index([tagId])
+}
+
+model BookSubject {
+  bookId    String
+  subjectId String
+
+  book    Book    @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, subjectId])
+  @@index([subjectId])
+}
+
+// ---------------------------------------------------------------------------
+// Exemplares físicos
+// ---------------------------------------------------------------------------
+
+model PhysicalCopy {
+  id            String         @id @default(cuid())
+  bookId        String
+  code          String         @unique // código interno gerado pela biblioteca
+  patrimonyCode String? // número de tombo — null até ser informado pelo NEABI
+  location      String?
+  shelf         String?
+  condition     CopyCondition?
+  status        CopyStatus     @default(AVAILABLE)
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  book         Book          @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  reservations Reservation[]
+
+  @@index([bookId, status])
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// Reservas presenciais (consulta/retirada — não é empréstimo domiciliar)
+// ---------------------------------------------------------------------------
+
+model Reservation {
+  id       String @id @default(cuid())
+  protocol String @unique
+
+  userId String
+  bookId String
+  copyId String?
+
+  // Dados declarados no formulário (podem divergir do perfil e são o registro do pedido).
+  fullName       String
+  email          String
+  phone          String
+  registrationId String?
+  patronType     PatronType
+
+  requestedDate DateTime // dia desejado (data pura, normalizada em UTC 00:00)
+  shift         Shift
+  purpose       String?
+
+  status ReservationStatus @default(PENDING)
+
+  adminNote     String?
+  approvedById  String?
+  approvedAt    DateTime?
+  readyAt       DateTime?
+  pickupDeadline DateTime?
+  pickedUpAt    DateTime?
+  returnedAt    DateTime?
+  cancelledAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User                 @relation("ReservationOwner", fields: [userId], references: [id], onDelete: Cascade)
+  approvedBy User?                @relation("ReservationApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  book       Book                 @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  copy       PhysicalCopy?        @relation(fields: [copyId], references: [id], onDelete: SetNull)
+  history    ReservationHistory[]
+
+  @@index([userId, status])
+  @@index([status, createdAt])
+  @@index([bookId])
+  @@index([copyId, status])
+  @@index([requestedDate])
+  @@index([createdAt])
+}
+
+model ReservationHistory {
+  id             String             @id @default(cuid())
+  reservationId  String
+  previousStatus ReservationStatus?
+  newStatus      ReservationStatus
+  changedById    String?
+  note           String?
+  changedAt      DateTime           @default(now())
+
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  changedBy   User?       @relation(fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([reservationId, changedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Arquivos digitais
+// ---------------------------------------------------------------------------
+
+model DigitalAsset {
+  id           String    @id @default(cuid())
+  bookId       String
+  kind         AssetKind
+  storageKey   String    @unique
+  fileName     String
+  mimeType     String
+  size         Int
+  // Consulta digital só é liberada com autorização explícita registrada pelo NEABI.
+  authorized      Boolean @default(false)
+  downloadAllowed Boolean @default(false)
+  uploadedById    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  book       Book  @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  uploadedBy User? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([bookId, kind])
+  @@index([authorized])
+}
+
+// ---------------------------------------------------------------------------
+// Analytics
+// ---------------------------------------------------------------------------
+
+model BookView {
+  id          String   @id @default(cuid())
+  bookId      String
+  userId      String?
+  visitorHash String? // hash irreversível — não armazenamos IP em claro
+  createdAt   DateTime @default(now())
+
+  book Book  @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([bookId, createdAt])
+  @@index([createdAt])
+}
+
+model SearchEvent {
+  id              String   @id @default(cuid())
+  query           String
+  normalizedQuery String
+  resultCount     Int
+  userId          String?
+  createdAt       DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([normalizedQuery])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Configurações institucionais (singleton)
+// ---------------------------------------------------------------------------
+
+model Settings {
+  id String @id @default("default")
+
+  libraryName String @default("Biblioteca NEABI")
+  institution String @default("CEFET/RJ")
+  campus      String @default("Campus Nova Iguaçu")
+  email       String @default("")
+  phone       String @default("")
+  address     String @default("")
+
+  // Ex.: { "mon": [{"start":"09:00","end":"17:00"}], ... }
+  openingHours Json @default("{}")
+  // Dias da semana em que há atendimento (0 = domingo … 6 = sábado)
+  serviceDays  Int[] @default([1, 2, 3, 4, 5])
+  // Turnos habilitados para reserva
+  availableShifts Shift[] @default([MORNING, AFTERNOON])
+
+  // Antecedência mínima (em dias) entre a solicitação e a data desejada.
+  reservationLeadDays Int @default(1)
+  // Janela máxima (em dias) para agendar no futuro.
+  reservationHorizonDays Int @default(60)
+  // Prazo (em dias) para retirada após o exemplar ficar pronto.
+  pickupDeadlineDays Int @default(3)
+  // Limite de reservas ativas simultâneas por usuário.
+  maxActiveReservations Int @default(3)
+
+  reservationInstructions String @default("")
+  socialLinks             Json   @default("{}")
+
+  updatedAt DateTime @updatedAt @default(now())
+}
+
+model ContactMessage {
+  id        String        @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  status    ContactStatus @default(NEW)
+  createdAt DateTime      @default(now())
+
+  @@index([status, createdAt])
+}

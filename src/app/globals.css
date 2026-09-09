@@ -1,26 +1,298 @@
 @import "tailwindcss";
 
+/* ==========================================================================
+   Biblioteca NEABI — design tokens
+   Identidade visual do Núcleo de Estudos Afro-Brasileiros e Indígenas.
+   As cinco cores institucionais são invariantes; os tons auxiliares são
+   derivados delas e existem apenas para estados, superfícies e contraste.
+   ========================================================================== */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Cores institucionais — não substituir */
+  --neabi-red: #e63329;
+  --neabi-amber: #f5a623;
+  --neabi-green: #1a7a4a;
+  --neabi-black: #0d0d0d;
+  --neabi-cream: #f4efe6;
+
+  /* Tons auxiliares derivados */
+  --neabi-red-050: #fdf0ef;
+  --neabi-red-100: #fbdcd9;
+  --neabi-red-200: #f4aca7;
+  --neabi-red-600: #c9241b;
+  --neabi-red-700: #a41c15;
+  --neabi-red-900: #5e100c;
+
+  --neabi-amber-050: #fef6e8;
+  --neabi-amber-100: #fdead0;
+  --neabi-amber-200: #fad49b;
+  --neabi-amber-600: #cf8611;
+  --neabi-amber-700: #a1670b;
+  --neabi-amber-900: #5b3a04;
+
+  --neabi-green-050: #eaf5ef;
+  --neabi-green-100: #cfe8da;
+  --neabi-green-200: #9ed2b7;
+  --neabi-green-600: #146039;
+  --neabi-green-700: #0f4a2c;
+  --neabi-green-900: #082817;
+
+  --neabi-cream-050: #fbf9f5;
+  --neabi-cream-100: #f4efe6;
+  --neabi-cream-200: #e8e0d1;
+  --neabi-cream-300: #d8ccb6;
+
+  --neabi-ink-900: #0d0d0d;
+  --neabi-ink-800: #1c1a18;
+  --neabi-ink-700: #33302c;
+  --neabi-ink-600: #4d4842;
+  --neabi-ink-500: #6b655c;
+  --neabi-ink-400: #8d867b;
+  --neabi-ink-300: #b3aca0;
+
+  /* Papéis semânticos */
+  --background: var(--neabi-cream-050);
+  --surface: #ffffff;
+  --surface-muted: var(--neabi-cream-100);
+  --surface-inverse: var(--neabi-black);
+  --foreground: var(--neabi-ink-900);
+  --foreground-muted: var(--neabi-ink-600);
+  --foreground-subtle: var(--neabi-ink-500);
+  --foreground-inverse: var(--neabi-cream);
+  --border: var(--neabi-cream-200);
+  --border-strong: var(--neabi-cream-300);
+  --ring: var(--neabi-red);
+
+  --success: var(--neabi-green);
+  --warning: var(--neabi-amber-700);
+  --danger: var(--neabi-red-600);
 }
 
 @theme inline {
+  --color-neabi-red: var(--neabi-red);
+  --color-neabi-red-050: var(--neabi-red-050);
+  --color-neabi-red-100: var(--neabi-red-100);
+  --color-neabi-red-200: var(--neabi-red-200);
+  --color-neabi-red-600: var(--neabi-red-600);
+  --color-neabi-red-700: var(--neabi-red-700);
+  --color-neabi-red-900: var(--neabi-red-900);
+
+  --color-neabi-amber: var(--neabi-amber);
+  --color-neabi-amber-050: var(--neabi-amber-050);
+  --color-neabi-amber-100: var(--neabi-amber-100);
+  --color-neabi-amber-200: var(--neabi-amber-200);
+  --color-neabi-amber-600: var(--neabi-amber-600);
+  --color-neabi-amber-700: var(--neabi-amber-700);
+  --color-neabi-amber-900: var(--neabi-amber-900);
+
+  --color-neabi-green: var(--neabi-green);
+  --color-neabi-green-050: var(--neabi-green-050);
+  --color-neabi-green-100: var(--neabi-green-100);
+  --color-neabi-green-200: var(--neabi-green-200);
+  --color-neabi-green-600: var(--neabi-green-600);
+  --color-neabi-green-700: var(--neabi-green-700);
+  --color-neabi-green-900: var(--neabi-green-900);
+
+  --color-neabi-black: var(--neabi-black);
+  --color-neabi-cream: var(--neabi-cream);
+  --color-neabi-cream-050: var(--neabi-cream-050);
+  --color-neabi-cream-100: var(--neabi-cream-100);
+  --color-neabi-cream-200: var(--neabi-cream-200);
+  --color-neabi-cream-300: var(--neabi-cream-300);
+
+  --color-ink-900: var(--neabi-ink-900);
+  --color-ink-800: var(--neabi-ink-800);
+  --color-ink-700: var(--neabi-ink-700);
+  --color-ink-600: var(--neabi-ink-600);
+  --color-ink-500: var(--neabi-ink-500);
+  --color-ink-400: var(--neabi-ink-400);
+  --color-ink-300: var(--neabi-ink-300);
+
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-inverse: var(--surface-inverse);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-foreground-subtle: var(--foreground-subtle);
+  --color-foreground-inverse: var(--foreground-inverse);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --font-display: var(--font-barlow-condensed), "Barlow Condensed", ui-sans-serif,
+    system-ui, sans-serif;
+  --font-sans: var(--font-dm-sans), "DM Sans", ui-sans-serif, system-ui, sans-serif;
+
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-weight: 400;
+    line-height: 1.6;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  .font-display {
+    font-family: var(--font-display);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+  }
+
+  /* Foco visível e consistente em todo o produto (WCAG 2.4.7 / 2.4.11). */
+  :focus-visible {
+    outline: 3px solid var(--neabi-red);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  .on-dark :focus-visible,
+  .dark-section :focus-visible {
+    outline-color: var(--neabi-amber);
+  }
+
+  ::selection {
+    background-color: var(--neabi-amber-200);
+    color: var(--neabi-ink-900);
+  }
+
+  [hidden] {
+    display: none !important;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ==========================================================================
+   Utilitários de identidade
+   ========================================================================== */
+
+@layer utilities {
+  /* Grafismo geométrico discreto, inspirado em tecidos de padronagem africana
+     (bogolan / mudcloth). Recurso secundário: baixa opacidade, nunca compete
+     com o conteúdo e nunca substitui a comunicação de significado. */
+  .neabi-pattern {
+    background-image:
+      repeating-linear-gradient(
+        45deg,
+        currentColor 0 1px,
+        transparent 1px 14px
+      ),
+      repeating-linear-gradient(
+        -45deg,
+        currentColor 0 1px,
+        transparent 1px 14px
+      );
+    background-size: 28px 28px;
+  }
+
+  .neabi-pattern-rows {
+    background-image:
+      repeating-linear-gradient(
+        to right,
+        currentColor 0 3px,
+        transparent 3px 20px
+      );
+    background-size: 40px 100%;
+  }
+
+  .neabi-pattern-diamonds {
+    background-image:
+      linear-gradient(135deg, currentColor 25%, transparent 25%),
+      linear-gradient(225deg, currentColor 25%, transparent 25%),
+      linear-gradient(45deg, currentColor 25%, transparent 25%),
+      linear-gradient(315deg, currentColor 25%, transparent 25%);
+    background-position:
+      12px 0,
+      12px 0,
+      0 0,
+      0 0;
+    background-size: 24px 24px;
+    background-repeat: repeat;
+  }
+
+  /* Faixa de três cores institucionais usada como divisor editorial. */
+  .neabi-rule {
+    background-image: linear-gradient(
+      to right,
+      var(--neabi-red) 0 33.33%,
+      var(--neabi-amber) 33.33% 66.66%,
+      var(--neabi-green) 66.66% 100%
+    );
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .text-pretty {
+    text-wrap: pretty;
+  }
+
+  /* Limita linhas sem quebrar layout com títulos longos. */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* Elemento visível apenas para leitores de tela, revelado ao receber foco. */
+.sr-only-focusable:not(:focus):not(:focus-within) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ==========================================================================
+   Movimento
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
