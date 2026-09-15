@@ -90,7 +90,8 @@ test("a obra publicada aparece no catálogo com disponibilidade real", async ({
   await page.goto(`/acervo/${SLUG}`);
 
   await expect(page.getByRole("heading", { level: 1, name: TITLE })).toBeVisible();
-  await expect(page.getByText("Exemplar físico disponível")).toBeVisible();
+  // O status aparece junto ao título e no cartão de disponibilidade.
+  await expect(page.getByText("Exemplar físico disponível").first()).toBeVisible();
 
   // Nenhum PDF autorizado: a leitura online não pode ser oferecida.
   await expect(page.getByText("Material digital não disponível")).toBeVisible();

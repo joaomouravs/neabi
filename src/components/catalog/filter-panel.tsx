@@ -1,347 +1,378 @@
 "use client";
 
-import * as Dialog from "@radix-ui/react-dialog";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useState } from "react";
+import { Check, SlidersHorizontal } from "lucide-react";
+import Link from "next/link";
+import { useId, useState } from "react";
 
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
-import { AVAILABILITY_FILTERS, materialTypeLabels } from "@/config/catalog";
-import { MaterialType } from "@/generated/prisma/enums";
+import {
+  AVAILABILITY_FILTERS,
+  categoryTone,
+  materialTypeLabels,
+  type NeabiTone,
+} from "@/config/catalog";
+import type { MaterialType } from "@/generated/prisma/enums";
 import { cn } from "@/lib/utils";
 
+import { SortSheet } from "./catalog-controls";
 import { useCatalogUrl } from "./use-catalog-url";
 
+export interface FacetOption {
+  slug: string;
+  name: string;
+  bookCount: number;
+}
+
 export interface FilterFacets {
-  subjects: { slug: string; name: string; bookCount: number }[];
-  contributors: { slug: string; name: string; bookCount: number }[];
-  materialTypes: MaterialType[];
+  categories: FacetOption[];
+  subjects: FacetOption[];
+  contributors: FacetOption[];
+  materialTypes: { value: MaterialType; bookCount: number }[];
   yearRange: { min: number | null; max: number | null };
 }
 
+const TONE_DOT: Record<NeabiTone, string> = {
+  red: "bg-neabi-red",
+  amber: "bg-neabi-amber",
+  green: "bg-neabi-green",
+};
+
 /**
- * Filtros avançados.
+ * Filtros do acervo.
  *
- * No desktop ficam numa coluna lateral persistente; no mobile, numa gaveta
- * inferior. O conteúdo é o mesmo componente nos dois casos — sem duplicação de
- * lógica nem divergência de comportamento entre tamanhos de tela.
+ * Desktop: coluna lateral fixa durante a rolagem. Celular e tablet: uma barra
+ * `[Filtros] [Ordenar]` presa sob o cabeçalho, com os filtros num painel
+ * inferior. O conteúdo é o mesmo componente nos dois casos — sem divergência
+ * de comportamento entre tamanhos de tela.
  */
-export function FilterPanel({
-  facets,
-  activeCount,
-}: {
-  facets: FilterFacets;
-  activeCount: number;
-}) {
+export function FilterSidebar({ facets }: { facets: FilterFacets }) {
   return (
-    <>
-      <aside
-        aria-labelledby="filtros-titulo"
-        className="hidden lg:block lg:w-64 lg:shrink-0"
-      >
-        <h2
-          id="filtros-titulo"
-          className="font-display text-lg font-semibold text-ink-900"
-        >
+    <aside
+      aria-labelledby="filtros-titulo"
+      className="hidden lg:block lg:self-start lg:sticky lg:top-[calc(var(--header-height-compact)+1.5rem)]"
+    >
+      <div className="scrollbar-none max-h-[calc(100dvh-var(--header-height-compact)-3rem)] overflow-y-auto pb-6 pr-1">
+        <h2 id="filtros-titulo" className="font-display text-2xl font-bold text-ink-900">
           Filtros
         </h2>
-        <div className="mt-5">
+        <div className="mt-4">
           <FilterFields facets={facets} />
         </div>
-      </aside>
-
-      <MobileFilterDrawer facets={facets} activeCount={activeCount} />
-    </>
+      </div>
+    </aside>
   );
 }
 
-function MobileFilterDrawer({
-  facets,
-  activeCount,
-}: {
-  facets: FilterFacets;
-  activeCount: number;
-}) {
-  const [open, setOpen] = useState(false);
-  const reducedMotion = useReducedMotion();
-  const duration = reducedMotion ? 0 : 0.26;
+export function MobileFilterBar({ facets }: { facets: FilterFacets }) {
+  const { activeCount } = useCatalogUrl();
 
   return (
-    <Dialog.Root open={open} onOpenChange={setOpen}>
-      <Dialog.Trigger asChild>
-        <Button variant="outline" size="md" className="lg:hidden">
-          Filtros
-          {activeCount > 0 ? (
-            <span className="ml-1 inline-flex size-5 items-center justify-center bg-neabi-red text-[0.6875rem] font-bold text-white">
-              {activeCount}
-            </span>
-          ) : null}
-        </Button>
-      </Dialog.Trigger>
-
-      <AnimatePresence>
-        {open ? (
-          <Dialog.Portal forceMount>
-            <Dialog.Overlay asChild>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration }}
-                className="fixed inset-0 z-50 bg-neabi-black/55 lg:hidden"
-              />
-            </Dialog.Overlay>
-
-            {/* Radix cuida do focus trap, do Escape e de `aria-modal`. */}
-            <Dialog.Content asChild>
-              <motion.div
-                initial={{ y: "100%" }}
-                animate={{ y: 0 }}
-                exit={{ y: "100%" }}
-                transition={{ duration, ease: "easeOut" }}
-                className="fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] flex-col bg-background lg:hidden"
-              >
-                <div className="flex items-center justify-between border-b border-border px-5 py-4">
-                  <Dialog.Title className="font-display text-xl font-semibold text-ink-900">
-                    Filtros
-                  </Dialog.Title>
-                  <Dialog.Close asChild>
-                    <button
-                      type="button"
-                      className="flex size-11 items-center justify-center text-ink-600"
-                    >
-                      <span aria-hidden="true" className="text-2xl leading-none">
-                        ×
-                      </span>
-                      <span className="sr-only">Fechar filtros</span>
-                    </button>
-                  </Dialog.Close>
-                </div>
-                <Dialog.Description className="sr-only">
-                  Refine os resultados do acervo por assunto, autoria, tipo de
-                  material, ano e disponibilidade.
-                </Dialog.Description>
-
-                <div className="flex-1 overflow-y-auto px-5 py-5">
-                  <FilterFields facets={facets} onApply={() => setOpen(false)} />
-                </div>
-
-                <div className="border-t border-border px-5 py-4">
-                  <Dialog.Close asChild>
-                    <Button className="w-full" size="lg">
-                      Ver resultados
-                    </Button>
-                  </Dialog.Close>
-                </div>
-              </motion.div>
-            </Dialog.Content>
-          </Dialog.Portal>
-        ) : null}
-      </AnimatePresence>
-    </Dialog.Root>
+    <div className="sticky top-[var(--header-height-compact)] z-30 -mx-5 border-b border-border bg-background px-5 py-3 md:-mx-8 md:px-8 lg:hidden">
+      <div className="grid grid-cols-2 gap-2">
+        <BottomSheet
+          title="Filtros"
+          description="Refine as obras por eixo, disponibilidade, tipo de material, tema, autoria e ano."
+          trigger={
+            <Button variant="outline" className="w-full min-w-0">
+              <SlidersHorizontal aria-hidden="true" />
+              Filtros
+              {activeCount > 0 ? (
+                <span className="inline-flex size-5 items-center justify-center bg-neabi-red-600 text-[0.6875rem] font-bold text-white">
+                  {activeCount}
+                  <span className="sr-only"> ativos</span>
+                </span>
+              ) : null}
+            </Button>
+          }
+          footer={(close) => (
+            <Button size="lg" className="w-full" onClick={close}>
+              Ver resultados
+            </Button>
+          )}
+        >
+          <FilterFields facets={facets} />
+        </BottomSheet>
+        <SortSheet />
+      </div>
+    </div>
   );
 }
 
-function FilterFields({
-  facets,
-  onApply,
-}: {
-  facets: FilterFacets;
-  onApply?: () => void;
-}) {
-  const { apply, current, clearAll } = useCatalogUrl();
+function FilterFields({ facets }: { facets: FilterFacets }) {
+  const { buildUrl, current, clearAll, activeCount } = useCatalogUrl();
 
-  const handleChange = (key: string, value: string | null) => {
-    apply({ [key]: value });
-    onApply?.();
-  };
+  const optionHref = (key: string, value: string) =>
+    buildUrl({ [key]: current(key) === value ? null : value });
 
   return (
     <div className="flex flex-col divide-y divide-border">
+      {facets.categories.length > 0 ? (
+        <FilterGroup title="Eixo temático">
+          <ul className="flex flex-col gap-0.5">
+            {facets.categories.map((category) => (
+              <li key={category.slug}>
+                <OptionLink
+                  href={optionHref("category", category.slug)}
+                  active={current("category") === category.slug}
+                  count={category.bookCount}
+                  dot={TONE_DOT[categoryTone(category.slug)]}
+                >
+                  {category.name}
+                </OptionLink>
+              </li>
+            ))}
+          </ul>
+        </FilterGroup>
+      ) : null}
+
       <FilterGroup title="Disponibilidade">
-        <div className="flex flex-col gap-2">
-          {AVAILABILITY_FILTERS.map((option) => {
-            const checked = current("availability") === option.value;
-            return (
-              <label
-                key={option.value}
-                className="flex min-h-9 cursor-pointer items-center gap-2.5 text-[0.875rem] text-ink-700"
+        <ul className="flex flex-col gap-0.5">
+          {AVAILABILITY_FILTERS.map((option) => (
+            <li key={option.value}>
+              <OptionLink
+                href={optionHref("availability", option.value)}
+                active={current("availability") === option.value}
               >
-                <input
-                  type="radio"
-                  name="availability"
-                  checked={checked}
-                  onChange={() => handleChange("availability", option.value)}
-                  className="size-4 cursor-pointer accent-[var(--neabi-red)]"
-                />
                 {option.label}
-              </label>
-            );
-          })}
-          {current("availability") ? (
-            <button
-              type="button"
-              onClick={() => handleChange("availability", null)}
-              className="self-start text-[0.8125rem] font-medium text-neabi-red-600 underline underline-offset-4"
-            >
-              Limpar disponibilidade
-            </button>
-          ) : null}
-        </div>
+              </OptionLink>
+            </li>
+          ))}
+        </ul>
       </FilterGroup>
 
-      <FilterGroup title="Tipo de material">
-        <select
-          value={current("type") ?? ""}
-          onChange={(event) => handleChange("type", event.target.value || null)}
-          aria-label="Tipo de material"
-          className="min-h-10 w-full cursor-pointer border border-ink-900/20 bg-white px-3 text-[0.875rem] text-ink-900 focus:border-ink-900 focus:outline-none"
-        >
-          <option value="">Todos os tipos</option>
-          {facets.materialTypes.map((type) => (
-            <option key={type} value={type}>
-              {materialTypeLabels[type]}
-            </option>
-          ))}
-        </select>
-      </FilterGroup>
+      {facets.materialTypes.length > 1 ? (
+        <FilterGroup title="Tipo de material">
+          <ul className="flex flex-col gap-0.5">
+            {facets.materialTypes.map((type) => (
+              <li key={type.value}>
+                <OptionLink
+                  href={optionHref("type", type.value)}
+                  active={current("type") === type.value}
+                  count={type.bookCount}
+                >
+                  {materialTypeLabels[type.value]}
+                </OptionLink>
+              </li>
+            ))}
+          </ul>
+        </FilterGroup>
+      ) : null}
 
       {facets.subjects.length > 0 ? (
-        <FilterGroup title="Assunto">
-          <ScrollableOptions
+        <FilterGroup title="Tema e assunto">
+          <SearchableOptions
+            param="subject"
             options={facets.subjects}
+            filterLabel="Filtrar temas"
+            optionHref={optionHref}
             activeSlug={current("subject")}
-            onSelect={(slug) => handleChange("subject", slug)}
           />
         </FilterGroup>
       ) : null}
 
       {facets.contributors.length > 0 ? (
         <FilterGroup title="Autoria e organização">
-          <ScrollableOptions
+          <SearchableOptions
+            param="author"
             options={facets.contributors}
+            filterLabel="Filtrar nomes"
+            optionHref={optionHref}
             activeSlug={current("author")}
-            onSelect={(slug) => handleChange("author", slug)}
           />
         </FilterGroup>
       ) : null}
 
       {facets.yearRange.min !== null && facets.yearRange.max !== null ? (
         <FilterGroup title="Ano de publicação">
-          <div className="flex items-center gap-2">
-            <YearInput
-              label="De"
-              value={current("yearFrom")}
-              min={facets.yearRange.min}
-              max={facets.yearRange.max}
-              onCommit={(value) => handleChange("yearFrom", value)}
-            />
-            <span aria-hidden="true" className="text-ink-400">
-              —
-            </span>
-            <YearInput
-              label="Até"
-              value={current("yearTo")}
-              min={facets.yearRange.min}
-              max={facets.yearRange.max}
-              onCommit={(value) => handleChange("yearTo", value)}
-            />
-          </div>
-          <p className="mt-2 text-[0.75rem] leading-snug text-ink-500">
-            Obras sem ano informado não aparecem quando este filtro é usado.
-          </p>
+          <YearRange min={facets.yearRange.min} max={facets.yearRange.max} />
         </FilterGroup>
       ) : null}
 
-      <div className="pt-5">
-        <button
-          type="button"
-          onClick={() => {
-            clearAll();
-            onApply?.();
-          }}
-          className="font-sans text-[0.875rem] font-semibold text-neabi-red-600 underline underline-offset-4 hover:text-neabi-red-700"
+      <div className="py-5">
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full"
+          disabled={activeCount === 0}
+          onClick={clearAll}
         >
-          Limpar todos os filtros
-        </button>
+          Limpar filtros
+        </Button>
       </div>
     </div>
   );
 }
 
-function FilterGroup({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  const id = useId();
   return (
-    <fieldset className="py-5 first:pt-0">
-      <legend className="mb-3 font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.11em] text-ink-500">
+    <section aria-labelledby={id} className="py-5 first:pt-2">
+      <h3 id={id} className="eyebrow mb-3 tracking-[0.12em] text-ink-500">
         {title}
-      </legend>
+      </h3>
       {children}
-    </fieldset>
+    </section>
   );
 }
 
-function ScrollableOptions({
-  options,
-  activeSlug,
-  onSelect,
+function OptionLink({
+  href,
+  active,
+  count,
+  dot,
+  children,
 }: {
-  options: { slug: string; name: string; bookCount: number }[];
-  activeSlug?: string;
-  onSelect: (slug: string | null) => void;
+  href: string;
+  active: boolean;
+  count?: number;
+  dot?: string;
+  children: React.ReactNode;
 }) {
   return (
-    <ul className="max-h-56 space-y-0.5 overflow-y-auto pr-1">
-      {options.map((option) => {
-        const active = activeSlug === option.slug;
-        return (
-          <li key={option.slug}>
-            <button
-              type="button"
-              onClick={() => onSelect(active ? null : option.slug)}
-              aria-pressed={active}
-              className={cn(
-                "flex min-h-9 w-full items-center justify-between gap-3 px-2 text-left text-[0.875rem] transition-colors",
-                active
-                  ? "bg-neabi-black text-neabi-cream"
-                  : "text-ink-700 hover:bg-neabi-cream-200/60",
-              )}
-            >
-              <span className="line-clamp-1">{option.name}</span>
-              <span
-                className={cn(
-                  "shrink-0 text-[0.75rem] tabular-nums",
-                  active ? "text-neabi-cream/70" : "text-ink-400",
-                )}
-              >
-                {option.bookCount}
-              </span>
-            </button>
-          </li>
+    <Link
+      href={href}
+      scroll={false}
+      aria-current={active ? "true" : undefined}
+      className={cn(
+        "flex min-h-10 w-full items-center gap-2.5 px-2.5 py-1.5 text-left text-[0.9375rem] leading-snug transition-colors duration-150",
+        active
+          ? "bg-neabi-black text-neabi-cream"
+          : "text-ink-700 hover:bg-neabi-cream-200/70 hover:text-ink-900",
+      )}
+    >
+      {dot ? <span aria-hidden="true" className={cn("size-1.5 shrink-0", dot)} /> : null}
+      <span className="min-w-0 flex-1">{children}</span>
+      {active ? (
+        <Check aria-hidden="true" className="size-4 shrink-0 text-neabi-amber" />
+      ) : count !== undefined ? (
+        <span aria-hidden="true" className="shrink-0 text-[0.75rem] tabular-nums text-ink-500">
+          {count}
+        </span>
+      ) : null}
+    </Link>
+  );
+}
+
+const VISIBLE_OPTIONS = 7;
+
+function SearchableOptions({
+  param,
+  options,
+  filterLabel,
+  optionHref,
+  activeSlug,
+}: {
+  param: string;
+  options: FacetOption[];
+  filterLabel: string;
+  optionHref: (key: string, value: string) => string;
+  activeSlug?: string;
+}) {
+  const [filter, setFilter] = useState("");
+  const [expanded, setExpanded] = useState(false);
+  const inputId = useId();
+
+  const normalize = (value: string) =>
+    value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+  const filtered = filter
+    ? options.filter((option) => normalize(option.name).includes(normalize(filter)))
+    : options;
+  // A opção ativa nunca some atrás do "mostrar mais".
+  const visible =
+    expanded || filter
+      ? filtered
+      : filtered.filter(
+          (option, index) => index < VISIBLE_OPTIONS || option.slug === activeSlug,
         );
-      })}
-    </ul>
+
+  return (
+    <div>
+      {options.length > VISIBLE_OPTIONS ? (
+        <>
+          <label htmlFor={inputId} className="sr-only">
+            {filterLabel}
+          </label>
+          <input
+            id={inputId}
+            type="search"
+            value={filter}
+            onChange={(event) => setFilter(event.target.value)}
+            placeholder={filterLabel}
+            className="mb-2 min-h-10 w-full border border-ink-900/15 bg-white px-3 text-[0.875rem] text-ink-900 placeholder:text-ink-500 focus:border-ink-900 focus-visible:outline-2"
+          />
+        </>
+      ) : null}
+      <ul className="flex flex-col gap-0.5">
+        {visible.map((option) => (
+          <li key={option.slug}>
+            <OptionLink
+              href={optionHref(param, option.slug)}
+              active={activeSlug === option.slug}
+              count={option.bookCount}
+            >
+              {option.name}
+            </OptionLink>
+          </li>
+        ))}
+      </ul>
+      {filter && filtered.length === 0 ? (
+        <p className="px-2.5 py-2 text-[0.8125rem] text-ink-500">Nenhum nome encontrado.</p>
+      ) : null}
+      {!filter && filtered.length > VISIBLE_OPTIONS ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((value) => !value)}
+          aria-expanded={expanded}
+          className="mt-2 px-2.5 text-[0.8125rem] font-semibold text-neabi-red-700 underline underline-offset-4 hover:text-neabi-red-900"
+        >
+          {expanded ? "Mostrar menos" : `Mostrar todos (${filtered.length})`}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function YearRange({ min, max }: { min: number; max: number }) {
+  const { apply, current } = useCatalogUrl();
+  const from = current("yearFrom") ?? "";
+  const to = current("yearTo") ?? "";
+
+  return (
+    <div>
+      {/* A chave recria os campos quando a URL muda por fora (limpar filtros). */}
+      <div key={`${from}-${to}`} className="flex items-center gap-2">
+        <YearInput label="De" defaultValue={from} min={min} max={max} onCommit={(value) => apply({ yearFrom: value })} />
+        <span aria-hidden="true" className="text-ink-400">
+          –
+        </span>
+        <YearInput label="Até" defaultValue={to} min={min} max={max} onCommit={(value) => apply({ yearTo: value })} />
+      </div>
+      <p className="mt-2 text-[0.75rem] leading-snug text-ink-500">
+        Obras sem ano informado não aparecem quando este filtro é usado.
+      </p>
+    </div>
   );
 }
 
 function YearInput({
   label,
-  value,
+  defaultValue,
   min,
   max,
   onCommit,
 }: {
   label: string;
-  value?: string;
+  defaultValue: string;
   min: number;
   max: number;
   onCommit: (value: string | null) => void;
 }) {
-  const [draft, setDraft] = useState(value ?? "");
+  const commit = (raw: string) => {
+    const value = raw.trim();
+    if (value !== defaultValue) onCommit(value || null);
+  };
 
   return (
     <label className="flex-1">
@@ -349,19 +380,18 @@ function YearInput({
       <input
         type="number"
         inputMode="numeric"
-        value={draft}
+        defaultValue={defaultValue}
         min={min}
         max={max}
         placeholder={label === "De" ? String(min) : String(max)}
-        onChange={(event) => setDraft(event.target.value)}
-        onBlur={() => onCommit(draft.trim() || null)}
+        onBlur={(event) => commit(event.currentTarget.value)}
         onKeyDown={(event) => {
           if (event.key === "Enter") {
             event.preventDefault();
-            onCommit(draft.trim() || null);
+            commit(event.currentTarget.value);
           }
         }}
-        className="min-h-10 w-full border border-ink-900/20 bg-white px-2.5 text-[0.875rem] text-ink-900 focus:border-ink-900 focus:outline-none"
+        className="min-h-10 w-full border border-ink-900/15 bg-white px-2.5 text-[0.875rem] text-ink-900 focus:border-ink-900 focus-visible:outline-2"
       />
     </label>
   );

@@ -24,21 +24,20 @@ test.describe("catálogo público", () => {
         .first(),
     ).toBeVisible();
 
-    // A busca do hero leva ao acervo com o termo na URL.
-    await page
-      .getByRole("searchbox", { name: /buscar livros, autores ou temas/i })
-      .first()
-      .fill("ancestralidade");
-    await page
-      .getByRole("button", { name: "Buscar", exact: true })
-      .first()
-      .click();
+    // A busca do hero é um combobox com sugestões reais; Enter sem sugestão
+    // escolhida leva ao acervo com o termo na URL.
+    const busca = page
+      .getByRole("combobox", { name: /buscar livros, autores ou temas/i })
+      .first();
+    await busca.fill("ancestralidade");
+    await expect(page.getByRole("option").first()).toBeVisible();
+    await page.getByRole("button", { name: "Buscar", exact: true }).first().click();
 
     await expect(page).toHaveURL(/\/acervo\?q=ancestralidade/);
     await expect(
       page.getByRole("heading", { level: 1, name: "Acervo" }),
     ).toBeVisible();
-    await expect(page.getByText(/obras? encontradas?/)).toBeVisible();
+    await expect(page.getByText(/resultados? para/)).toBeVisible();
 
     // Abre a primeira obra do resultado.
     const firstBook = page.locator("main ul li article h3 a").first();
@@ -85,17 +84,34 @@ test.describe("catálogo público", () => {
     await expect(page.getByText("Filtros ativos:")).toBeVisible();
 
     // Limpar devolve o acervo completo.
-    await page.getByRole("button", { name: "Limpar tudo" }).click();
+    await page.getByRole("button", { name: "Limpar filtros" }).first().click();
     await expect(page).toHaveURL(/\/acervo$/);
+  });
+
+  test("sugestões da busca vêm do acervo e avisam quando nada é encontrado", async ({
+    page,
+  }) => {
+    await page.goto("/acervo");
+    const busca = page.getByRole("combobox").first();
+
+    await busca.fill("relações");
+    await expect(
+      page.getByRole("option", { name: /Relações Étnico-Raciais e Educação no Brasil/ }),
+    ).toBeVisible();
+
+    await busca.fill("zzzznaoexistenoacervo");
+    await expect(page.getByText("Nenhum resultado encontrado")).toBeVisible();
+    await expect(page.getByRole("option", { name: "Ver todos os resultados" })).toBeVisible();
   });
 
   test("busca sem resultado mostra estado vazio, não erro", async ({ page }) => {
     await page.goto("/acervo?q=zzzznaoexistenoacervo");
 
-    await expect(page.getByText("Nenhuma obra encontrada.")).toBeVisible();
     await expect(
-      page.getByText("Tente pesquisar outro termo ou alterar os filtros."),
+      page.getByRole("heading", { name: "Nenhuma obra encontrada" }),
     ).toBeVisible();
+    await expect(page.getByText(/Não encontramos obras para/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Limpar filtros" }).first()).toBeVisible();
   });
 
   test("obra inexistente responde com a página 404 do NEABI", async ({ page }) => {

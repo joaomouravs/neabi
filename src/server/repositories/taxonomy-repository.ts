@@ -114,6 +114,18 @@ export async function listContributorsWithCounts(limit = 60) {
   }));
 }
 
+/** Tipos de material presentes no acervo publicado, com contagem. */
+export async function listMaterialTypesWithCounts() {
+  const grouped = await prisma.book.groupBy({
+    by: ["materialType"],
+    where: { status: BookStatus.PUBLISHED },
+    _count: { _all: true },
+  });
+  return grouped
+    .map((row) => ({ value: row.materialType, bookCount: row._count._all }))
+    .sort((a, b) => b.bookCount - a.bookCount);
+}
+
 /** Intervalo de anos presente no acervo publicado — limita os filtros de data. */
 export async function getPublishedYearRange(): Promise<{
   min: number | null;

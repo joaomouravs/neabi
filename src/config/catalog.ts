@@ -81,10 +81,27 @@ export const reservationStatusTone: Record<
   APPROVED: "green",
   REJECTED: "red",
   READY_FOR_PICKUP: "green",
-  PICKED_UP: "amber",
+  PICKED_UP: "neutral",
   RETURNED: "neutral",
   CANCELLED: "neutral",
-  EXPIRED: "red",
+  EXPIRED: "neutral",
+};
+
+/** O que cada status significa para quem pediu — e o que fazer agora. */
+export const reservationStatusGuidance: Record<ReservationStatus, string> = {
+  PENDING:
+    "A equipe do NEABI ainda vai analisar o pedido. Não é preciso comparecer por enquanto.",
+  APPROVED:
+    "Pedido aprovado e exemplar designado. Aguarde a indicação de que está pronto para retirada.",
+  READY_FOR_PICKUP:
+    "O exemplar está separado para você. Compareça ao NEABI dentro do prazo de retirada.",
+  PICKED_UP:
+    "O exemplar está com você em consulta. Devolva conforme as orientações do núcleo.",
+  RETURNED: "Consulta concluída e exemplar devolvido ao acervo.",
+  REJECTED:
+    "O pedido não pôde ser atendido. Veja a observação da equipe, quando houver, ou escolha outra data.",
+  CANCELLED: "Esta reserva foi cancelada e o exemplar voltou ao acervo.",
+  EXPIRED: "O prazo de retirada terminou e o exemplar voltou ao acervo.",
 };
 
 export const shiftLabels: Record<Shift, string> = {
@@ -163,6 +180,37 @@ export const QUICK_FILTER_SLUGS = [
   "memoria-e-ancestralidade",
   "pesquisa",
 ] as const;
+
+/**
+ * Detalhe cromático de cada eixo.
+ *
+ * Três tons institucionais, distribuídos por afinidade de tema — não uma cor
+ * arbitrária por categoria. Eixo novo sem entrada aqui cai no tom calculado
+ * por `categoryTone`, que é estável para o mesmo slug.
+ */
+export type NeabiTone = "red" | "amber" | "green";
+
+const CATEGORY_TONES: Record<string, NeabiTone> = {
+  "relacoes-etnico-raciais": "red",
+  "direitos-e-politicas": "red",
+  "genero-e-raca": "red",
+  "cultura-afro-brasileira": "amber",
+  historia: "amber",
+  "memoria-e-ancestralidade": "amber",
+  educacao: "green",
+  "povos-indigenas": "green",
+  pesquisa: "green",
+};
+
+export function categoryTone(slug: string | null | undefined): NeabiTone {
+  if (!slug) return "red";
+  const known = CATEGORY_TONES[slug];
+  if (known) return known;
+  const tones: NeabiTone[] = ["red", "amber", "green"];
+  let hash = 0;
+  for (const char of slug) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return tones[hash % tones.length];
+}
 
 export const AVAILABILITY_FILTERS = [
   { value: "fisico", label: "Exemplar físico disponível" },

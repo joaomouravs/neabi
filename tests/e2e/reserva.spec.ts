@@ -79,13 +79,16 @@ test.describe("pessoa usuária", () => {
 
     await expect(page).toHaveURL(/\/reservar\/confirmacao\?protocolo=/);
     await expect(
-      page.getByRole("heading", { name: "Reserva solicitada com sucesso" }),
+      page.getByRole("heading", { level: 1, name: "Solicitação enviada" }),
     ).toBeVisible();
 
     // A confirmação NÃO pode afirmar que o livro está reservado: ainda depende
-    // da análise da equipe.
+    // da análise da equipe — e a página diz isso com todas as letras.
     await expect(
       page.getByText("Sua solicitação foi recebida e será analisada"),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Solicitação enviada não é reserva aprovada" }),
     ).toBeVisible();
     await expect(page.getByText("Aguardando análise")).toBeVisible();
 
@@ -171,9 +174,10 @@ test.describe("equipe do NEABI", () => {
     await applyAction(page, "Registrar devolução");
     await expect(page.getByText("Devolvida").first()).toBeVisible();
 
-    // O exemplar precisa ter voltado ao acervo.
+    // O exemplar precisa ter voltado ao acervo. O status aparece junto ao
+    // título e no cartão de disponibilidade — basta o primeiro visível.
     await page.goto(`/acervo/${BOOK_SLUG}`);
-    await expect(page.getByText(/Exemplar físico disponível/)).toBeVisible();
+    await expect(page.getByText(/Exemplar físico disponível/).first()).toBeVisible();
   });
 });
 

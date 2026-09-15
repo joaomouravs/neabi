@@ -170,7 +170,7 @@ export function ReservationActions({
           </Field>
 
           <div className="flex flex-wrap gap-2">
-            <Button type="submit" size="sm" disabled={pending}>
+            <Button type="submit" size="sm" loading={pending}>
               {pending ? "Aplicando…" : `Confirmar: ${ACTION_LABELS[openAction]}`}
             </Button>
             <Button

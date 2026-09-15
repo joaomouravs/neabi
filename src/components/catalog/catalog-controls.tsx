@@ -1,86 +1,47 @@
 "use client";
 
+import { ArrowDownUp, Check, X } from "lucide-react";
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
 
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
-import { SORT_OPTIONS } from "@/config/catalog";
+import { DEFAULT_SORT, SORT_OPTIONS, categoryTone, type NeabiTone } from "@/config/catalog";
 import { cn } from "@/lib/utils";
 
+import { SearchCombobox } from "./search-combobox";
 import { useCatalogUrl } from "./use-catalog-url";
 
 /**
- * Controles do acervo: busca, pílulas de categoria e ordenação.
+ * Controles do acervo: busca, eixos rápidos, ordenação e filtros ativos.
  *
- * Todos são links ou formulários reais — funcionam com o JavaScript ainda
- * carregando e são navegáveis por teclado sem armadilhas de foco.
+ * Tudo escreve na URL. Os eixos são links reais — funcionam com o JavaScript
+ * ainda carregando, abrem em nova aba e são navegáveis por teclado.
  */
+
+const TONE_DOT: Record<NeabiTone, string> = {
+  red: "bg-neabi-red",
+  amber: "bg-neabi-amber",
+  green: "bg-neabi-green",
+};
 
 // ---------------------------------------------------------------------------
 // Busca
 // ---------------------------------------------------------------------------
 
-export function CatalogSearchInput({ initialValue }: { initialValue: string }) {
+export function CatalogSearch({ initialValue }: { initialValue: string }) {
   const { apply } = useCatalogUrl();
-  const [value, setValue] = useState(initialValue);
-
-  /**
-   * Sincroniza o campo quando a navegação vem de fora (botão voltar, link).
-   * Ajustar o estado durante a renderização é o padrão recomendado para isso —
-   * um efeito causaria uma renderização extra em cascata.
-   */
-  const [lastFromUrl, setLastFromUrl] = useState(initialValue);
-  if (initialValue !== lastFromUrl) {
-    setLastFromUrl(initialValue);
-    setValue(initialValue);
-  }
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    apply({ q: value.trim() || null });
-  }
 
   return (
-    <form onSubmit={handleSubmit} role="search" className="w-full">
-      <label htmlFor="busca-acervo" className="sr-only">
-        Buscar no acervo por título, autoria, assunto, editora ou ISBN
-      </label>
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <input
-            id="busca-acervo"
-            name="q"
-            type="search"
-            value={value}
-            onChange={(event) => setValue(event.target.value)}
-            placeholder="Buscar livros, autores ou temas"
-            autoComplete="off"
-            className="min-h-12 w-full border border-ink-900/20 bg-white px-3.5 pr-10 font-sans text-[0.9375rem] text-ink-900 placeholder:text-ink-400 focus:border-ink-900 focus:outline-none"
-          />
-          {value.length > 0 ? (
-            <button
-              type="button"
-              onClick={() => {
-                setValue("");
-                apply({ q: null });
-              }}
-              className="absolute right-1 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center text-ink-500 hover:text-ink-900"
-            >
-              <span aria-hidden="true">×</span>
-              <span className="sr-only">Limpar busca</span>
-            </button>
-          ) : null}
-        </div>
-        <Button type="submit" size="md" className="px-6">
-          Buscar
-        </Button>
-      </div>
-    </form>
+    <SearchCombobox
+      initialValue={initialValue}
+      label="Buscar no acervo por título, autoria, assunto, editora ou ISBN"
+      onSubmitQuery={(query) => apply({ q: query || null })}
+    />
   );
 }
 
 // ---------------------------------------------------------------------------
-// Pílulas de categoria
+// Eixos em linha (celular e tablet)
 // ---------------------------------------------------------------------------
 
 export interface QuickFilter {
@@ -89,28 +50,24 @@ export interface QuickFilter {
   bookCount: number;
 }
 
-export function CategoryPills({
-  categories,
-  active,
-}: {
-  categories: QuickFilter[];
-  active?: string;
-}) {
-  const { buildUrl } = useCatalogUrl();
+export function CategoryPills({ categories }: { categories: QuickFilter[] }) {
+  const { buildUrl, current } = useCatalogUrl();
+  const active = current("category");
 
   return (
-    <nav aria-label="Filtrar por categoria">
-      <ul className="flex flex-wrap gap-2">
-        <li>
+    <nav aria-label="Filtrar por eixo" className="-mx-5 md:-mx-8">
+      <ul className="scrollbar-none flex gap-2 overflow-x-auto px-5 pb-1 md:px-8">
+        <li className="shrink-0">
           <PillLink href={buildUrl({ category: null })} active={!active}>
             Todos
           </PillLink>
         </li>
         {categories.map((category) => (
-          <li key={category.slug}>
+          <li key={category.slug} className="shrink-0">
             <PillLink
-              href={buildUrl({ category: category.slug })}
+              href={buildUrl({ category: active === category.slug ? null : category.slug })}
               active={active === category.slug}
+              tone={categoryTone(category.slug)}
             >
               {category.name}
             </PillLink>
@@ -124,10 +81,12 @@ export function CategoryPills({
 function PillLink({
   href,
   active,
+  tone,
   children,
 }: {
   href: string;
   active: boolean;
+  tone?: NeabiTone;
   children: React.ReactNode;
 }) {
   return (
@@ -136,12 +95,13 @@ function PillLink({
       scroll={false}
       aria-current={active ? "true" : undefined}
       className={cn(
-        "inline-flex min-h-9 items-center border px-3.5 font-sans text-[0.8125rem] font-medium transition-colors",
+        "inline-flex min-h-10 items-center gap-2 whitespace-nowrap border px-3.5 font-sans text-[0.875rem] font-medium transition-colors",
         active
           ? "border-neabi-black bg-neabi-black text-neabi-cream"
-          : "border-ink-900/20 text-ink-700 hover:border-ink-900/45 hover:text-ink-900",
+          : "border-ink-900/15 bg-surface text-ink-700 hover:border-ink-900/45 hover:text-ink-900",
       )}
     >
+      {tone ? <span aria-hidden="true" className={cn("size-1.5", TONE_DOT[tone])} /> : null}
       {children}
     </Link>
   );
@@ -151,11 +111,17 @@ function PillLink({
 // Ordenação
 // ---------------------------------------------------------------------------
 
-export function SortSelect({ value }: { value: string }) {
-  const { apply } = useCatalogUrl();
+function sortValueFor(value: string) {
+  return value === DEFAULT_SORT ? null : value;
+}
+
+/** Seletor nativo para o desktop — acessível e familiar. */
+export function SortSelect() {
+  const { apply, current } = useCatalogUrl();
+  const value = current("sort") ?? DEFAULT_SORT;
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2.5">
       <label
         htmlFor="ordenacao"
         className="whitespace-nowrap font-sans text-[0.8125rem] font-medium text-ink-600"
@@ -165,8 +131,8 @@ export function SortSelect({ value }: { value: string }) {
       <select
         id="ordenacao"
         value={value}
-        onChange={(event) => apply({ sort: event.target.value })}
-        className="min-h-10 cursor-pointer border border-ink-900/20 bg-white px-3 pr-8 font-sans text-[0.875rem] text-ink-900 focus:border-ink-900 focus:outline-none"
+        onChange={(event) => apply({ sort: sortValueFor(event.target.value) })}
+        className="min-h-10 cursor-pointer appearance-none border border-ink-900/20 bg-white bg-size-[10px] bg-position-[right_0.75rem_center] bg-no-repeat py-2 pl-3 pr-8 font-sans text-[0.875rem] text-ink-900 transition-colors [background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 11 7%22><path d=%22M1 1l4.5 4.5L10 1%22 fill=%22none%22 stroke=%22%234D4842%22 stroke-width=%221.6%22/></svg>')] hover:border-ink-900/40 focus:border-ink-900 focus-visible:outline-2"
       >
         {SORT_OPTIONS.map((option) => (
           <option key={option.value} value={option.value}>
@@ -175,6 +141,73 @@ export function SortSelect({ value }: { value: string }) {
         ))}
       </select>
     </div>
+  );
+}
+
+/** Ordenação em painel inferior para o celular. */
+export function SortSheet() {
+  const { apply, current } = useCatalogUrl();
+  const value = current("sort") ?? DEFAULT_SORT;
+  const label = SORT_OPTIONS.find((option) => option.value === value)?.label;
+
+  return (
+    <BottomSheet
+      title="Ordenar"
+      description="Escolha a ordem de exibição das obras."
+      trigger={
+        <Button variant="outline" className="w-full min-w-0">
+          <ArrowDownUp aria-hidden="true" />
+          <span className="truncate">Ordenar</span>
+          <span className="sr-only">: {label}</span>
+        </Button>
+      }
+    >
+      <SortOptions value={value} onChange={(next) => apply({ sort: sortValueFor(next) })} />
+    </BottomSheet>
+  );
+}
+
+function SortOptions({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <fieldset>
+      <legend className="sr-only">Ordem das obras</legend>
+      <div className="flex flex-col">
+        {SORT_OPTIONS.map((option) => {
+          const checked = option.value === value;
+          return (
+            <label
+              key={option.value}
+              className="flex min-h-12 cursor-pointer items-center gap-3 border-b border-border text-[1rem] text-ink-800 last:border-b-0"
+            >
+              <input
+                type="radio"
+                name="ordenacao-movel"
+                value={option.value}
+                checked={checked}
+                onChange={() => onChange(option.value)}
+                className="peer sr-only"
+              />
+              <span
+                aria-hidden="true"
+                className="flex size-5 shrink-0 items-center justify-center rounded-full border border-ink-900/35 peer-checked:border-neabi-red-600 peer-checked:bg-neabi-red-600 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-neabi-red-600"
+              >
+                <span className={cn("size-2 rounded-full bg-white", checked ? "block" : "hidden")} />
+              </span>
+              <span className={cn("flex-1", checked && "font-semibold text-ink-900")}>
+                {option.label}
+              </span>
+              {checked ? <Check aria-hidden="true" className="size-4 text-neabi-red-600" /> : null}
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
   );
 }
 
@@ -194,7 +227,7 @@ export function ActiveFilters({ filters }: { filters: ActiveFilter[] }) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="font-sans text-[0.8125rem] font-medium text-ink-500">
+      <span className="mr-1 font-sans text-[0.8125rem] font-medium text-ink-500">
         Filtros ativos:
       </span>
       {filters.map((filter) => (
@@ -202,20 +235,30 @@ export function ActiveFilters({ filters }: { filters: ActiveFilter[] }) {
           key={`${filter.key}-${filter.value}`}
           type="button"
           onClick={() => apply({ [filter.key]: null })}
-          className="inline-flex min-h-8 items-center gap-1.5 border border-ink-900/20 bg-white px-2.5 font-sans text-[0.8125rem] text-ink-700 transition-colors hover:border-neabi-red hover:text-neabi-red-700"
+          className="group inline-flex min-h-9 items-center gap-2 border border-ink-900/20 bg-surface pl-3 pr-2 font-sans text-[0.8125rem] text-ink-800 transition-colors hover:border-neabi-red-600 hover:text-neabi-red-700"
         >
           {filter.label}
-          <span aria-hidden="true">×</span>
-          <span className="sr-only">Remover filtro {filter.label}</span>
+          <X aria-hidden="true" className="size-3.5 text-ink-500 group-hover:text-neabi-red-700" />
+          <span className="sr-only">— remover filtro</span>
         </button>
       ))}
       <button
         type="button"
         onClick={clearAll}
-        className="min-h-8 font-sans text-[0.8125rem] font-semibold text-neabi-red-600 underline underline-offset-4 hover:text-neabi-red-700"
+        className="ml-1 min-h-9 font-sans text-[0.8125rem] font-semibold text-neabi-red-700 underline underline-offset-4 hover:text-neabi-red-900"
       >
-        Limpar tudo
+        Limpar filtros
       </button>
     </div>
+  );
+}
+
+/** Botão de limpar para o estado vazio (componente de servidor não tem router). */
+export function ClearFiltersButton() {
+  const { clearAll } = useCatalogUrl();
+  return (
+    <Button onClick={clearAll} size="lg">
+      Limpar filtros
+    </Button>
   );
 }

@@ -10,7 +10,7 @@ export default function Forbidden() {
       title="Acesso não autorizado"
       description="Sua conta não tem permissão para acessar esta área. Se você faz parte da equipe do NEABI e precisa de acesso, fale com a administração."
     >
-      <Button asChild size="lg">
+      <Button asChild variant="onDark" size="lg">
         <Link href="/">Voltar ao início</Link>
       </Button>
       <Button asChild variant="onDarkOutline" size="lg">

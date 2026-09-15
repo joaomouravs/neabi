@@ -23,6 +23,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${siteConfig.url}/acervo`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
     { url: `${siteConfig.url}/sobre`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
     { url: `${siteConfig.url}/contato`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${siteConfig.url}/acessibilidade`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${siteConfig.url}/privacidade`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
   ];
 
   const bookRoutes: MetadataRoute.Sitemap = books.map((book) => ({

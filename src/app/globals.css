@@ -19,6 +19,8 @@
   --neabi-red-050: #fdf0ef;
   --neabi-red-100: #fbdcd9;
   --neabi-red-200: #f4aca7;
+  /* #C9241B dá 5,6:1 com branco. O vermelho institucional (4,3:1) reprova
+     AA em texto de interface: fica para faixas, marcadores e acentos. */
   --neabi-red-600: #c9241b;
   --neabi-red-700: #a41c15;
   --neabi-red-900: #5e100c;
@@ -46,7 +48,9 @@
   --neabi-ink-800: #1c1a18;
   --neabi-ink-700: #33302c;
   --neabi-ink-600: #4d4842;
+  /* Menor tom aceito para texto sobre o fundo claro (5,4:1). */
   --neabi-ink-500: #6b655c;
+  /* Abaixo daqui: só traços, bordas e ícones decorativos. */
   --neabi-ink-400: #8d867b;
   --neabi-ink-300: #b3aca0;
 
@@ -61,11 +65,22 @@
   --foreground-inverse: var(--neabi-cream);
   --border: var(--neabi-cream-200);
   --border-strong: var(--neabi-cream-300);
-  --ring: var(--neabi-red);
+  --ring: var(--neabi-red-600);
 
   --success: var(--neabi-green);
   --warning: var(--neabi-amber-700);
   --danger: var(--neabi-red-600);
+
+  /* Estrutura */
+  --header-height: 4.5rem;
+  --header-height-compact: 3.75rem;
+  --container-max: 80rem; /* 1280px */
+
+  /* Movimento: curto e sem elasticidade — nada que atrase a leitura. */
+  --ease-editorial: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --duration-fast: 150ms;
+  --duration-base: 220ms;
+  --duration-slow: 300ms;
 }
 
 @theme inline {
@@ -127,6 +142,37 @@
   --radius-sm: 3px;
   --radius-md: 4px;
   --radius-lg: 6px;
+
+  --ease-editorial: var(--ease-editorial);
+
+  /* Elevação mínima: a superfície se destaca, não flutua. */
+  --shadow-hairline: 0 1px 0 rgb(13 13 13 / 0.04);
+  --shadow-card: 0 1px 2px rgb(13 13 13 / 0.05), 0 10px 24px -16px rgb(13 13 13 / 0.22);
+  --shadow-lift: 0 2px 4px rgb(13 13 13 / 0.05), 0 18px 36px -18px rgb(13 13 13 / 0.32);
+  --shadow-overlay: 0 24px 60px -20px rgb(13 13 13 / 0.45);
+
+  --animate-fade-up: neabi-fade-up var(--duration-slow) var(--ease-editorial) both;
+  --animate-fade-in: neabi-fade-in var(--duration-base) var(--ease-editorial) both;
+}
+
+@keyframes neabi-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes neabi-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* ==========================================================================
@@ -140,6 +186,8 @@
 
   html {
     -webkit-text-size-adjust: 100%;
+    /* Âncoras e o "voltar ao topo" não ficam escondidos atrás do header. */
+    scroll-padding-top: calc(var(--header-height) + 1rem);
   }
 
   body {
@@ -167,7 +215,7 @@
 
   /* Foco visível e consistente em todo o produto (WCAG 2.4.7 / 2.4.11). */
   :focus-visible {
-    outline: 3px solid var(--neabi-red);
+    outline: 3px solid var(--neabi-red-600);
     outline-offset: 2px;
     border-radius: 2px;
   }
@@ -185,6 +233,11 @@
   [hidden] {
     display: none !important;
   }
+
+  /* O `×` nativo do campo de busca duplica o botão "Limpar" próprio. */
+  input[type="search"]::-webkit-search-cancel-button {
+    appearance: none;
+  }
 }
 
 /* ==========================================================================
@@ -197,26 +250,17 @@
      com o conteúdo e nunca substitui a comunicação de significado. */
   .neabi-pattern {
     background-image:
-      repeating-linear-gradient(
-        45deg,
-        currentColor 0 1px,
-        transparent 1px 14px
-      ),
-      repeating-linear-gradient(
-        -45deg,
-        currentColor 0 1px,
-        transparent 1px 14px
-      );
+      repeating-linear-gradient(45deg, currentColor 0 1px, transparent 1px 14px),
+      repeating-linear-gradient(-45deg, currentColor 0 1px, transparent 1px 14px);
     background-size: 28px 28px;
   }
 
   .neabi-pattern-rows {
-    background-image:
-      repeating-linear-gradient(
-        to right,
-        currentColor 0 3px,
-        transparent 3px 20px
-      );
+    background-image: repeating-linear-gradient(
+      to right,
+      currentColor 0 3px,
+      transparent 3px 20px
+    );
     background-size: 40px 100%;
   }
 
@@ -233,6 +277,15 @@
       0 0;
     background-size: 24px 24px;
     background-repeat: repeat;
+  }
+
+  /* Linhas horizontais finas, como pautas de um caderno de registro. */
+  .neabi-pattern-lines {
+    background-image: repeating-linear-gradient(
+      to bottom,
+      currentColor 0 1px,
+      transparent 1px 10px
+    );
   }
 
   /* Faixa de três cores institucionais usada como divisor editorial. */
@@ -266,6 +319,108 @@
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+  }
+
+  /* ------------------------------------------------------------------------
+     Escala tipográfica fluida. Os limites inferiores foram medidos contra
+     os títulos reais mais longos do acervo em 375px.
+     ------------------------------------------------------------------------ */
+  .text-display-xl {
+    font-size: clamp(3rem, 8.4vw, 6.5rem);
+    line-height: 0.9;
+    letter-spacing: -0.015em;
+  }
+
+  .text-display-lg {
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    line-height: 0.95;
+    letter-spacing: -0.012em;
+  }
+
+  .text-display-md {
+    font-size: clamp(2rem, 4.2vw, 3.25rem);
+    line-height: 1;
+  }
+
+  .text-display-sm {
+    font-size: clamp(1.625rem, 3vw, 2.25rem);
+    line-height: 1.05;
+  }
+
+  .text-lede {
+    font-size: clamp(1.0625rem, 1.4vw, 1.25rem);
+    line-height: 1.6;
+  }
+
+  /* Sobretítulo editorial: caixa-alta espaçada, sempre curto. */
+  .eyebrow {
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    line-height: 1.3;
+    text-transform: uppercase;
+  }
+
+  /* ------------------------------------------------------------------------
+     Ritmo vertical. Três passos cobrem o produto inteiro — nenhuma seção
+     inventa o próprio respiro.
+     ------------------------------------------------------------------------ */
+  .section-y {
+    padding-block: clamp(3.5rem, 8vw, 6rem);
+  }
+
+  .section-y-sm {
+    padding-block: clamp(2.5rem, 5vw, 4rem);
+  }
+
+  .section-y-lg {
+    padding-block: clamp(4rem, 10vw, 8rem);
+  }
+
+  /* ------------------------------------------------------------------------
+     Link com sublinhado animado curto. O traço existe em repouso (o link
+     continua reconhecível sem depender de cor) e cresce no hover/foco.
+     ------------------------------------------------------------------------ */
+  .link-underline {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    background-size: 100% 1px;
+    padding-bottom: 1px;
+    transition: background-size var(--duration-base) var(--ease-editorial),
+      color var(--duration-fast) ease;
+  }
+
+  .link-underline:hover,
+  .link-underline:focus-visible {
+    background-size: 100% 2px;
+  }
+
+  /* Sublinhado que nasce do zero — para navegação, onde o traço em repouso
+     poluiria uma fileira de links. */
+  .link-reveal {
+    background-image: linear-gradient(var(--neabi-red), var(--neabi-red));
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    background-size: 0% 2px;
+    transition: background-size var(--duration-base) var(--ease-editorial),
+      color var(--duration-fast) ease;
+  }
+
+  .link-reveal:hover,
+  .link-reveal:focus-visible,
+  .link-reveal[aria-current="page"] {
+    background-size: 100% 2px;
+  }
+
+  /* Oculta a barra de rolagem de listas horizontais sem impedir a rolagem. */
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 }
 

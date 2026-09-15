@@ -1,36 +1,53 @@
+import { Quote } from "lucide-react";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
 import { Suspense } from "react";
 
 import { AvailabilityCard } from "@/components/books/availability-card";
-import { BookCard } from "@/components/books/book-card";
+import { CopyReference, ShareButton } from "@/components/books/book-actions";
 import { BookCover, MissingCoverNote } from "@/components/books/book-cover";
-import { formatCredit } from "@/components/books/book-card";
+import { BookGrid } from "@/components/books/book-grid";
+import { StickyReserveBar } from "@/components/books/sticky-reserve-bar";
+import { Button } from "@/components/ui/button";
 import {
+  Breadcrumbs,
   Container,
   MetadataList,
   NeabiRule,
   SectionHeading,
 } from "@/components/layout/primitives";
-import { Badge } from "@/components/ui/badge";
 import {
   catalogingStatusLabels,
+  categoryTone,
   contributorRoleLabels,
   materialTypeLabels,
+  type NeabiTone,
 } from "@/config/catalog";
 import { siteConfig } from "@/config/site";
 import { ContributorRole } from "@/generated/prisma/enums";
+import { formatCredit } from "@/lib/credits";
+import { buildReference } from "@/lib/reference";
+import { cn } from "@/lib/utils";
 import { getActor } from "@/server/auth/session";
 import {
   findBookBySlug,
   findRelatedBooks,
 } from "@/server/repositories/book-repository";
-import { computeAvailability } from "@/server/services/availability";
+import {
+  computeAvailability,
+  physicalAvailabilityLabel,
+} from "@/server/services/availability";
 import { recordBookView } from "@/server/services/book-service";
 
 type Params = Promise<{ slug: string }>;
+
+const TONE_DOT: Record<NeabiTone, string> = {
+  red: "bg-neabi-red",
+  amber: "bg-neabi-amber",
+  green: "bg-neabi-green",
+};
 
 export async function generateMetadata({
   params,
@@ -45,8 +62,7 @@ export async function generateMetadata({
   const description =
     book.description ??
     book.summary ??
-    [book.subtitle, credit, book.publisher?.name].filter(Boolean).join(" · ") ??
-    siteConfig.description;
+    [book.subtitle, credit, book.publisher?.name].filter(Boolean).join(" · ");
 
   return {
     title: book.title,
@@ -69,211 +85,285 @@ export default async function BookPage({ params }: { params: Params }) {
 
   const availability = computeAvailability(book.copies, book.assets);
   const credit = formatCredit(book.contributors);
+  const primaryCategory = book.categories[0]?.category;
+  const tone = categoryTone(primaryCategory?.slug);
+  const contributorsByRole = groupContributors(book.contributors);
+  const reference = buildReference(book);
 
   // Contabiliza o acesso sem bloquear a renderização da página.
   void trackView(book.id, actor?.id ?? null);
 
-  const contributorsByRole = groupContributors(book.contributors);
+  const reserveHref = actor
+    ? `/acervo/${book.slug}/reservar`
+    : `/login?callbackUrl=${encodeURIComponent(`/acervo/${book.slug}/reservar`)}`;
+
+  // O tipo de material já está no selo acima do título.
+  const quickFacts = [
+    book.year ? String(book.year) : null,
+    book.publisher?.name ?? book.institution?.name ?? null,
+    book.pages ? `${book.pages} páginas` : null,
+  ].filter((fact): fact is string => Boolean(fact));
+
+  const description = book.description ?? book.summary;
+  const hasSubjects = book.subjects.length > 0 || book.tags.length > 0;
 
   return (
     <>
-      <Container className="pt-8">
-        <Breadcrumbs
-          categoryName={book.categories[0]?.category.name}
-          categorySlug={book.categories[0]?.category.slug}
-          title={book.title}
-        />
-      </Container>
+      <div className="border-b border-border bg-surface-muted">
+        <Container className="py-3.5">
+          <Breadcrumbs
+            items={[
+              { href: "/", label: "Início" },
+              { href: "/acervo", label: "Acervo" },
+              ...(primaryCategory
+                ? [
+                    {
+                      href: `/acervo?category=${primaryCategory.slug}`,
+                      label: primaryCategory.name,
+                    },
+                  ]
+                : []),
+              { label: book.title },
+            ]}
+          />
+        </Container>
+      </div>
 
-      <Container className="pb-20 pt-8">
+      <Container className="pb-16 pt-8 sm:pt-10 lg:pb-24 lg:pt-14">
         {/*
-          Ordem no mobile: capa → título → ficha → disponibilidade → descrição.
-          No desktop, a disponibilidade vai para a terceira coluna. O card é
-          renderizado UMA vez e reposicionado pela grade — duplicá-lo criaria
-          IDs repetidos e conteúdo repetido para leitores de tela.
+          Uma única marcação, reposicionada por áreas de grade:
+          - celular: capa → título/autoria/status → reserva → ficha → descrição;
+          - desktop médio: capa e reserva à esquerda, conteúdo à direita;
+          - desktop largo: capa | conteúdo | reserva.
+          O cartão de disponibilidade é renderizado uma vez só — duplicá-lo por
+          tamanho de tela repetiria IDs e conteúdo para leitores de tela.
         */}
-        <div className="grid gap-10 lg:grid-cols-[260px_minmax(0,1fr)_320px] lg:gap-x-12 lg:gap-y-0">
+        <div
+          className={cn(
+            "grid grid-cols-[minmax(0,1fr)] gap-x-12",
+            "[grid-template-areas:'cover'_'head'_'avail'_'info'_'about'_'subjects']",
+            "lg:grid-cols-[15rem_minmax(0,1fr)] lg:grid-rows-[auto_auto_auto_1fr]",
+            "lg:[grid-template-areas:'cover_head'_'avail_about'_'avail_info'_'avail_subjects']",
+            "xl:grid-cols-[16.5rem_minmax(0,1fr)_20rem] xl:gap-x-14",
+            "xl:[grid-template-areas:'cover_head_avail'_'cover_about_avail'_'cover_info_avail'_'cover_subjects_avail']",
+          )}
+        >
           {/* Capa */}
-          <div className="mx-auto w-full max-w-[260px] lg:col-start-1 lg:row-start-1 lg:mx-0">
-            <BookCover
-              title={book.title}
-              coverImage={book.coverImage}
-              coverAlt={book.coverAlt}
-              priority
-              sizes="(min-width: 1024px) 260px, 60vw"
-            />
-            {!book.coverImage ? (
-              <div className="mt-3">
-                <MissingCoverNote />
+          <div className="pb-8 [grid-area:cover] lg:pb-10">
+            <div className="xl:sticky xl:top-[calc(var(--header-height-compact)+1.5rem)]">
+              <div className="mx-auto w-full max-w-[13.5rem] sm:max-w-[15rem] lg:max-w-none">
+                <BookCover
+                  title={book.title}
+                  coverImage={book.coverImage}
+                  coverAlt={book.coverAlt}
+                  tone={tone}
+                  categoryName={primaryCategory?.name}
+                  credit={credit}
+                  priority
+                  sizes="(min-width: 1280px) 264px, (min-width: 1024px) 240px, 240px"
+                  className="shadow-lift"
+                />
               </div>
-            ) : null}
+              {!book.coverImage ? (
+                <div className="mt-3 text-center lg:text-left">
+                  <MissingCoverNote />
+                </div>
+              ) : null}
+            </div>
           </div>
 
-          {/* Identificação e ficha bibliográfica */}
-          <div className="min-w-0 lg:col-start-2 lg:row-start-1">
+          {/* Identificação */}
+          <header className="min-w-0 pb-8 [grid-area:head] lg:pb-10">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="red">{materialTypeLabels[book.materialType]}</Badge>
-              {book.categories.map(({ category }) => (
-                <Link key={category.id} href={`/acervo?category=${category.slug}`}>
-                  <Badge variant="outline">{category.name}</Badge>
+              <span className="eyebrow inline-flex min-h-8 items-center border border-ink-900/20 px-2.5 tracking-[0.1em] text-ink-700">
+                {materialTypeLabels[book.materialType]}
+              </span>
+              {book.categories.map(({ category }, index) => (
+                <Link
+                  key={category.id}
+                  href={`/acervo?category=${category.slug}`}
+                  // No celular, só o eixo principal: os demais aparecem em
+                  // "Assuntos" e não empurram o título para baixo.
+                  className={cn(
+                    "eyebrow min-h-8 items-center gap-2 bg-neabi-cream-200/80 px-2.5 tracking-[0.1em] text-ink-700 transition-colors hover:bg-neabi-cream-300 hover:text-ink-900",
+                    index === 0 ? "inline-flex" : "hidden sm:inline-flex",
+                  )}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={cn("size-1.5", TONE_DOT[categoryTone(category.slug)])}
+                  />
+                  {category.name}
                 </Link>
               ))}
             </div>
 
-            <h1 className="mt-4 text-balance font-display text-[clamp(2rem,5vw,3.25rem)] font-bold leading-[0.98] text-ink-900">
+            <h1 className="mt-5 text-balance font-display text-display-md font-bold text-ink-900">
               {book.title}
             </h1>
 
             {book.subtitle ? (
-              <p className="mt-3 text-pretty font-display text-[1.375rem] font-semibold leading-tight text-ink-600">
+              <p className="mt-3 text-pretty font-display text-[clamp(1.25rem,2.2vw,1.625rem)] font-semibold leading-tight text-ink-600">
                 {book.subtitle}
               </p>
             ) : null}
 
-            {credit ? (
-              <p className="mt-4 text-[1.0625rem] text-ink-700">{credit}</p>
+            {contributorsByRole.length > 0 ? (
+              <div className="mt-5 flex flex-col gap-1.5 text-[1rem] leading-snug text-ink-700 sm:text-[1.0625rem]">
+                {contributorsByRole.map((group) => (
+                  <p key={group.role}>
+                    <span className="text-ink-500">{contributorRoleLabels[group.role]}: </span>
+                    {group.names.map((person, index) => (
+                      <span key={person.slug}>
+                        <Link
+                          href={`/acervo?author=${person.slug}`}
+                          className="font-medium text-ink-900 underline decoration-ink-300 decoration-1 underline-offset-4 transition-colors hover:decoration-neabi-red-600"
+                        >
+                          {person.name}
+                        </Link>
+                        {index < group.names.length - 1 ? "; " : ""}
+                      </span>
+                    ))}
+                  </p>
+                ))}
+              </div>
             ) : null}
 
             <NeabiRule className="mt-7" />
 
-            <section aria-labelledby="ficha-titulo" className="mt-10">
-              <h2
-                id="ficha-titulo"
-                className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-ink-500"
-              >
-                Ficha bibliográfica
-              </h2>
-              <div className="mt-4">
-                <MetadataList
-                  items={[
-                    ...contributorsByRole.map((group) => ({
-                      label: contributorRoleLabels[group.role],
-                      value: (
-                        <span className="flex flex-wrap gap-x-1.5">
-                          {group.names.map((person, index) => (
-                            <span key={person.slug}>
-                              <Link
-                                href={`/acervo?author=${person.slug}`}
-                                className="underline decoration-ink-300 underline-offset-4 transition-colors hover:decoration-neabi-red"
-                              >
-                                {person.name}
-                              </Link>
-                              {index < group.names.length - 1 ? ";" : ""}
-                            </span>
-                          ))}
-                        </span>
-                      ),
-                    })),
-                    { label: "Instituição", value: book.institution?.name },
-                    { label: "Editora", value: book.publisher?.name },
-                    { label: "Coleção", value: book.collection },
-                    { label: "Edição", value: book.edition },
-                    { label: "Ano", value: book.year },
-                    { label: "Idioma", value: book.language },
-                    { label: "Páginas", value: book.pages },
-                    { label: "ISBN", value: book.isbn },
-                    {
-                      label: "Tipo de material",
-                      value: materialTypeLabels[book.materialType],
-                    },
-                    {
-                      label: "Assuntos",
-                      value:
-                        book.subjects.length > 0 ? (
-                          <span className="flex flex-wrap gap-1.5">
-                            {book.subjects.map(({ subject }) => (
-                              <Link
-                                key={subject.id}
-                                href={`/acervo?subject=${subject.slug}`}
-                              >
-                                <Badge variant="neutral" size="sm">
-                                  {subject.name}
-                                </Badge>
-                              </Link>
-                            ))}
-                          </span>
-                        ) : null,
-                    },
-                    {
-                      label: "Tags",
-                      value:
-                        book.tags.length > 0 ? (
-                          <span className="flex flex-wrap gap-1.5">
-                            {book.tags.map(({ tag }) => (
-                              <Link key={tag.id} href={`/acervo?tag=${tag.slug}`}>
-                                <Badge variant="neutral" size="sm">
-                                  {tag.name}
-                                </Badge>
-                              </Link>
-                            ))}
-                          </span>
-                        ) : null,
-                    },
-                  ]}
+            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2.5 text-[0.9375rem]">
+              <span className="inline-flex items-center gap-2 font-medium">
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "size-2 rounded-full",
+                    availability.physicalAvailable
+                      ? "bg-neabi-green"
+                      : availability.hasPhysicalCopies
+                        ? "bg-neabi-amber"
+                        : "bg-ink-300",
+                  )}
                 />
-              </div>
-
-              {book.catalogingStatus === "NEEDS_REVIEW" ? (
-                <p className="mt-6 border-l-2 border-neabi-amber bg-neabi-amber-050 px-4 py-3 text-[0.8125rem] leading-relaxed text-neabi-amber-900">
-                  {catalogingStatusLabels.NEEDS_REVIEW}. Alguns campos ainda não
-                  foram conferidos pela equipe do NEABI e por isso não aparecem
-                  nesta ficha.
-                </p>
+                <span
+                  className={
+                    availability.physicalAvailable ? "text-neabi-green-700" : "text-ink-700"
+                  }
+                >
+                  {physicalAvailabilityLabel(availability)}
+                </span>
+              </span>
+              {quickFacts.length > 0 ? (
+                <span className="text-ink-600">{quickFacts.join(" · ")}</span>
               ) : null}
-            </section>
-          </div>
+            </div>
+
+            <div className="mt-6 flex flex-wrap gap-2">
+              <ShareButton title={book.title} path={`/acervo/${book.slug}`} />
+              <Button asChild variant="outline" size="sm">
+                <Link href="#referencia">
+                  <Quote aria-hidden="true" />
+                  Citar esta obra
+                </Link>
+              </Button>
+            </div>
+          </header>
 
           {/* Disponibilidade */}
-          <div className="lg:col-start-3 lg:row-start-1">
-            <div className="lg:sticky lg:top-24">
+          <div className="pb-10 [grid-area:avail] lg:pb-0">
+            <div className="lg:sticky lg:top-[calc(var(--header-height-compact)+1.5rem)]">
               <AvailabilityCard
                 slug={book.slug}
                 availability={availability}
                 copies={book.copies}
                 isAuthenticated={Boolean(actor)}
+                reserveCtaId="cta-reserva"
               />
             </div>
           </div>
 
-          {/* Descrição e notas */}
-          <div className="min-w-0 lg:col-start-2 lg:row-start-2 lg:pb-4">
-            {book.description || book.summary ? (
-              <section aria-labelledby="sobre-obra" className="lg:mt-12">
-                <h2
-                  id="sobre-obra"
-                  className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-ink-500"
-                >
-                  Sobre a obra
-                </h2>
+          {/* Sobre esta obra */}
+          {description || book.notes ? (
+            <section aria-labelledby="sobre-obra" className="min-w-0 pb-10 [grid-area:about]">
+              <SectionLabel id="sobre-obra">Sobre esta obra</SectionLabel>
+              {description ? (
                 <div className="mt-4 max-w-prose space-y-4 text-[1.0625rem] leading-relaxed text-ink-800">
-                  {(book.description ?? book.summary ?? "")
-                    .split(/\n{2,}/)
-                    .map((paragraph, index) => (
-                      <p key={index} className="text-pretty">
-                        {paragraph}
-                      </p>
-                    ))}
+                  {description.split(/\n{2,}/).map((paragraph, index) => (
+                    <p key={index} className="text-pretty">
+                      {paragraph}
+                    </p>
+                  ))}
                 </div>
-              </section>
+              ) : null}
+              {book.notes ? (
+                <div className="mt-6 max-w-prose border-l-2 border-border-strong pl-4">
+                  <p className="eyebrow tracking-[0.12em] text-ink-500">Notas de catalogação</p>
+                  <p className="mt-1.5 text-[0.9375rem] leading-relaxed text-ink-600">
+                    {book.notes}
+                  </p>
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+
+          {/* Informações bibliográficas */}
+          <section aria-labelledby="ficha-titulo" className="min-w-0 pb-10 [grid-area:info]">
+            <SectionLabel id="ficha-titulo">Informações bibliográficas</SectionLabel>
+            <div className="mt-4 border-t border-border pt-4">
+              <MetadataList
+                items={[
+                  ...contributorsByRole.map((group) => ({
+                    label: contributorRoleLabels[group.role],
+                    value: group.names.map((person) => person.name).join("; "),
+                  })),
+                  { label: "Instituição", value: book.institution?.name },
+                  { label: "Editora", value: book.publisher?.name },
+                  { label: "Coleção", value: book.collection },
+                  { label: "Edição", value: book.edition },
+                  { label: "Ano", value: book.year },
+                  { label: "Idioma", value: book.language },
+                  { label: "Páginas", value: book.pages },
+                  { label: "ISBN", value: book.isbn },
+                  { label: "Tipo de material", value: materialTypeLabels[book.materialType] },
+                ]}
+              />
+            </div>
+
+            {book.catalogingStatus === "NEEDS_REVIEW" ? (
+              <p className="mt-6 max-w-prose border-l-2 border-neabi-amber bg-neabi-amber-050 px-4 py-3 text-[0.8125rem] leading-relaxed text-neabi-amber-900">
+                {catalogingStatusLabels.NEEDS_REVIEW}. Alguns campos ainda não
+                foram conferidos pela equipe do NEABI e por isso não aparecem
+                nesta ficha.
+              </p>
             ) : null}
 
-            {book.notes ? (
-              <section
-                aria-labelledby="notas-obra"
-                className="mt-10 first:mt-0 lg:first:mt-12"
-              >
-                <h2
-                  id="notas-obra"
-                  className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-ink-500"
-                >
-                  Notas de catalogação
-                </h2>
-                <p className="mt-3 max-w-prose text-[0.9375rem] leading-relaxed text-ink-600">
-                  {book.notes}
-                </p>
-              </section>
-            ) : null}
-          </div>
+            <div id="referencia" className="mt-6 scroll-mt-28">
+              <CopyReference reference={reference} />
+            </div>
+          </section>
+
+          {/* Assuntos */}
+          {hasSubjects || book.categories.length > 0 ? (
+            <section aria-labelledby="assuntos-titulo" className="min-w-0 pb-4 [grid-area:subjects]">
+              <SectionLabel id="assuntos-titulo">Assuntos</SectionLabel>
+              <ul className="mt-4 flex flex-wrap gap-2">
+                {book.categories.map(({ category }) => (
+                  <li key={`c-${category.id}`}>
+                    <SubjectLink href={`/acervo?category=${category.slug}`}>{category.name}</SubjectLink>
+                  </li>
+                ))}
+                {book.subjects.map(({ subject }) => (
+                  <li key={`s-${subject.id}`}>
+                    <SubjectLink href={`/acervo?subject=${subject.slug}`}>{subject.name}</SubjectLink>
+                  </li>
+                ))}
+                {book.tags.map(({ tag }) => (
+                  <li key={`t-${tag.id}`}>
+                    <SubjectLink href={`/acervo?tag=${tag.slug}`}>{tag.name}</SubjectLink>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
         </div>
       </Container>
 
@@ -283,7 +373,36 @@ export default async function BookPage({ params }: { params: Params }) {
           categoryIds={book.categories.map(({ category }) => category.id)}
         />
       </Suspense>
+
+      {availability.physicalAvailable ? (
+        <StickyReserveBar
+          href={reserveHref}
+          title={book.title}
+          statusLabel={physicalAvailabilityLabel(availability)}
+          targetId="cta-reserva"
+          stopId="relacionadas"
+        />
+      ) : null}
     </>
+  );
+}
+
+function SectionLabel({ id, children }: { id: string; children: React.ReactNode }) {
+  return (
+    <h2 id={id} className="font-display text-[1.625rem] font-bold leading-tight text-ink-900">
+      {children}
+    </h2>
+  );
+}
+
+function SubjectLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="inline-flex min-h-10 items-center border border-ink-900/15 bg-surface px-3.5 text-[0.875rem] text-ink-800 transition-colors hover:border-ink-900 hover:text-ink-900"
+    >
+      {children}
+    </Link>
   );
 }
 
@@ -298,67 +417,30 @@ async function RelatedBooks({
   if (related.length === 0) return null;
 
   return (
-    <section className="border-t border-border py-16">
+    <section
+      id="relacionadas"
+      aria-labelledby="relacionadas-titulo"
+      className="section-y border-t border-border bg-surface-muted"
+    >
       <Container>
         <SectionHeading
+          id="relacionadas-titulo"
           eyebrow="No mesmo eixo"
-          title="Outras obras do acervo"
-          level={2}
+          title="Você também pode se interessar"
+          action={
+            <Link
+              href="/acervo"
+              className="link-underline text-[0.9375rem] font-semibold text-ink-900"
+            >
+              Ver acervo completo
+            </Link>
+          }
         />
-        <ul className="mt-10 grid grid-cols-2 gap-x-5 gap-y-11 sm:grid-cols-3 lg:grid-cols-4">
-          {related.map((book) => (
-            <li key={book.id}>
-              <BookCard book={book} />
-            </li>
-          ))}
-        </ul>
+        <div className="mt-10">
+          <BookGrid books={related} />
+        </div>
       </Container>
     </section>
-  );
-}
-
-function Breadcrumbs({
-  categoryName,
-  categorySlug,
-  title,
-}: {
-  categoryName?: string;
-  categorySlug?: string;
-  title: string;
-}) {
-  return (
-    <nav aria-label="Trilha de navegação">
-      <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.8125rem] text-ink-500">
-        <li>
-          <Link href="/" className="hover:text-ink-900">
-            Início
-          </Link>
-        </li>
-        <li aria-hidden="true">/</li>
-        <li>
-          <Link href="/acervo" className="hover:text-ink-900">
-            Acervo
-          </Link>
-        </li>
-        {categoryName && categorySlug ? (
-          <>
-            <li aria-hidden="true">/</li>
-            <li>
-              <Link
-                href={`/acervo?category=${categorySlug}`}
-                className="hover:text-ink-900"
-              >
-                {categoryName}
-              </Link>
-            </li>
-          </>
-        ) : null}
-        <li aria-hidden="true">/</li>
-        <li aria-current="page" className="line-clamp-1 text-ink-700">
-          {title}
-        </li>
-      </ol>
-    </nav>
   );
 }
 
@@ -394,10 +476,7 @@ async function trackView(bookId: string, userId: string | null): Promise<void> {
   const headerList = await headers();
   const seed =
     userId ??
-    [
-      headerList.get("x-forwarded-for"),
-      headerList.get("user-agent"),
-    ]
+    [headerList.get("x-forwarded-for"), headerList.get("user-agent")]
       .filter(Boolean)
       .join("|");
 

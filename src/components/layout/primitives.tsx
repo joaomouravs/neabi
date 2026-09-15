@@ -1,3 +1,5 @@
+import { ChevronRight } from "lucide-react";
+import Link from "next/link";
 import type { ComponentProps, ElementType, ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
@@ -9,6 +11,12 @@ import { cn } from "@/lib/utils";
  * das seções vêm daqui, não de valores avulsos espalhados pelas telas.
  */
 
+/**
+ * Contêiner de página.
+ *
+ * Laterais de 20px no celular e 32px a partir do tablet; no desktop o conteúdo
+ * para em 1280px e nunca se espalha por uma tela de 1920px.
+ */
 export function Container({
   className,
   as: Component = "div",
@@ -16,15 +24,16 @@ export function Container({
   ...props
 }: ComponentProps<"div"> & {
   as?: ElementType;
-  size?: "default" | "wide" | "narrow";
+  size?: "default" | "wide" | "narrow" | "prose";
 }) {
   return (
     <Component
       className={cn(
-        "mx-auto w-full px-5 sm:px-8",
-        size === "narrow" && "max-w-3xl",
-        size === "default" && "max-w-[1180px]",
-        size === "wide" && "max-w-[1400px]",
+        "mx-auto w-full px-5 md:px-8",
+        size === "prose" && "max-w-[46rem]",
+        size === "narrow" && "max-w-4xl",
+        size === "default" && "max-w-[80rem]",
+        size === "wide" && "max-w-[90rem]",
         className,
       )}
       {...props}
@@ -33,10 +42,7 @@ export function Container({
 }
 
 /** Faixa tricolor institucional, usada como divisor editorial. */
-export function NeabiRule({
-  className,
-  ...props
-}: ComponentProps<"div">) {
+export function NeabiRule({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
       aria-hidden="true"
@@ -46,13 +52,39 @@ export function NeabiRule({
   );
 }
 
+/** Sobretítulo com um traço curto à esquerda. */
+export function Eyebrow({
+  children,
+  tone = "light",
+  className,
+}: {
+  children: ReactNode;
+  tone?: "light" | "dark";
+  className?: string;
+}) {
+  return (
+    <p
+      className={cn(
+        "eyebrow flex items-center gap-2.5",
+        tone === "dark" ? "text-neabi-amber" : "text-neabi-red-600",
+        className,
+      )}
+    >
+      <span aria-hidden="true" className="h-px w-6 shrink-0 bg-current" />
+      {children}
+    </p>
+  );
+}
+
 export interface SectionHeadingProps {
   eyebrow?: string;
   title: ReactNode;
   description?: ReactNode;
   action?: ReactNode;
   level?: 1 | 2 | 3;
+  size?: "md" | "lg";
   tone?: "light" | "dark";
+  id?: string;
   className?: string;
 }
 
@@ -62,7 +94,9 @@ export function SectionHeading({
   description,
   action,
   level = 2,
+  size = "md",
   tone = "light",
+  id,
   className,
 }: SectionHeadingProps) {
   const Heading = `h${level}` as ElementType;
@@ -71,27 +105,25 @@ export function SectionHeading({
   return (
     <div
       className={cn(
-        "flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between",
+        "flex flex-col gap-6 md:flex-row md:items-end md:justify-between",
         className,
       )}
     >
       <div className="max-w-2xl">
         {eyebrow ? (
-          <p
-            className={cn(
-              "mb-2.5 font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.16em]",
-              dark ? "text-neabi-amber" : "text-neabi-red-600",
-            )}
-          >
+          <Eyebrow tone={tone} className="mb-3">
             {eyebrow}
-          </p>
+          </Eyebrow>
         ) : null}
         <Heading
+          id={id}
           className={cn(
             "text-balance font-display font-bold",
             level === 1
-              ? "text-[clamp(2.5rem,7vw,4.5rem)]"
-              : "text-[clamp(1.75rem,4vw,2.75rem)]",
+              ? "text-display-lg"
+              : size === "lg"
+                ? "text-display-md"
+                : "text-display-sm",
             dark ? "text-neabi-cream" : "text-ink-900",
           )}
         >
@@ -100,7 +132,7 @@ export function SectionHeading({
         {description ? (
           <div
             className={cn(
-              "mt-3 text-pretty text-base leading-relaxed sm:text-[1.0625rem]",
+              "mt-4 text-pretty text-base leading-relaxed sm:text-[1.0625rem]",
               dark ? "text-neabi-cream/75" : "text-ink-600",
             )}
           >
@@ -110,6 +142,157 @@ export function SectionHeading({
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>
+  );
+}
+
+export interface BreadcrumbItem {
+  href?: string;
+  label: string;
+}
+
+/**
+ * Trilha de navegação.
+ *
+ * O último item é a página atual (`aria-current`) e é truncado em uma linha:
+ * títulos de obra passam de cem caracteres e não podem empurrar o layout.
+ */
+export function Breadcrumbs({
+  items,
+  tone = "light",
+  className,
+}: {
+  items: BreadcrumbItem[];
+  tone?: "light" | "dark";
+  className?: string;
+}) {
+  const dark = tone === "dark";
+
+  return (
+    <nav aria-label="Trilha de navegação" className={cn("min-w-0", className)}>
+      <ol className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-[0.8125rem]">
+        {items.map((item, index) => {
+          const last = index === items.length - 1;
+          return (
+            <li
+              key={`${item.label}-${index}`}
+              className={cn("flex min-w-0 items-center gap-1.5", last && "max-w-full")}
+            >
+              {index > 0 ? (
+                <ChevronRight
+                  aria-hidden="true"
+                  className={cn(
+                    "size-3.5 shrink-0",
+                    dark ? "text-neabi-cream/40" : "text-ink-400",
+                  )}
+                />
+              ) : null}
+              {item.href && !last ? (
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "link-reveal whitespace-nowrap",
+                    dark
+                      ? "text-neabi-cream/70 hover:text-neabi-cream"
+                      : "text-ink-600 hover:text-ink-900",
+                  )}
+                >
+                  {item.label}
+                </Link>
+              ) : (
+                <span
+                  aria-current={last ? "page" : undefined}
+                  className={cn(
+                    "line-clamp-1 max-w-[min(32rem,70vw)] font-medium",
+                    dark ? "text-neabi-cream" : "text-ink-800",
+                  )}
+                >
+                  {item.label}
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
+
+/**
+ * Cabeçalho das páginas internas.
+ *
+ * Fundo creme com pautas finas à direita — presença da identidade sem
+ * competir com o título. `children` ocupa a coluna lateral no desktop
+ * (números, atalhos, ações).
+ */
+export function PageHeader({
+  eyebrow,
+  title,
+  description,
+  breadcrumbs,
+  children,
+  tone = "light",
+  className,
+}: {
+  eyebrow?: string;
+  title: ReactNode;
+  description?: ReactNode;
+  breadcrumbs?: BreadcrumbItem[];
+  children?: ReactNode;
+  tone?: "light" | "dark";
+  className?: string;
+}) {
+  const dark = tone === "dark";
+
+  return (
+    <section
+      className={cn(
+        "relative overflow-hidden",
+        dark
+          ? "on-dark bg-neabi-black text-neabi-cream"
+          : "border-b border-border bg-surface-muted",
+        className,
+      )}
+    >
+      <div
+        aria-hidden="true"
+        className={cn(
+          "pointer-events-none absolute inset-y-0 right-0 hidden w-1/2 [mask-image:linear-gradient(to_left,black,transparent)] md:block",
+          dark
+            ? "neabi-pattern text-neabi-cream opacity-[0.06]"
+            : "neabi-pattern-lines text-ink-900 opacity-[0.045]",
+        )}
+      />
+      <Container className="section-y-sm relative">
+        {breadcrumbs ? (
+          <Breadcrumbs items={breadcrumbs} tone={tone} className="mb-7" />
+        ) : null}
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between lg:gap-16">
+          <div className="min-w-0 max-w-3xl">
+            {eyebrow ? <Eyebrow tone={tone}>{eyebrow}</Eyebrow> : null}
+            <h1
+              className={cn(
+                "mt-3 text-balance font-display text-display-lg font-bold",
+                dark ? "text-neabi-cream" : "text-ink-900",
+              )}
+            >
+              {title}
+            </h1>
+            <NeabiRule className="mt-6" />
+            {description ? (
+              <div
+                className={cn(
+                  "mt-5 max-w-2xl text-pretty text-lede",
+                  dark ? "text-neabi-cream/75" : "text-ink-600",
+                )}
+              >
+                {description}
+              </div>
+            ) : null}
+          </div>
+          {children ? <div className="min-w-0 lg:max-w-sm lg:shrink-0">{children}</div> : null}
+        </div>
+      </Container>
+    </section>
   );
 }
 
@@ -131,13 +314,16 @@ export function MetadataList({
   if (visible.length === 0) return null;
 
   return (
-    <dl className={cn("grid gap-x-8 gap-y-3.5 sm:grid-cols-[auto_1fr]", className)}>
+    <dl className={cn("flex flex-col", className)}>
       {visible.map((item) => (
-        <div key={item.label} className="contents">
+        <div
+          key={item.label}
+          className="grid gap-1 border-b border-border py-3 first:pt-0 last:border-b-0 last:pb-0 sm:grid-cols-[10rem_minmax(0,1fr)] sm:gap-6"
+        >
           <dt className="font-sans text-[0.75rem] font-semibold uppercase tracking-[0.1em] text-ink-500 sm:pt-0.5">
             {item.label}
           </dt>
-          <dd className="text-[0.9375rem] leading-relaxed text-ink-800 sm:mt-0">
+          <dd className="min-w-0 break-words text-[0.9375rem] leading-relaxed text-ink-800">
             {item.value}
           </dd>
         </div>

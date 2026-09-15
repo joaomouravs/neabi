@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { BookCard, formatCredit } from "@/components/books/book-card";
+import { BookCard, availabilityText, formatCredit } from "@/components/books/book-card";
 import { ContributorRole } from "@/generated/prisma/enums";
 import type { BookCardRecord } from "@/server/repositories/book-repository";
 
@@ -11,7 +11,13 @@ import type { BookCardRecord } from "@/server/repositories/book-repository";
  * O que precisa se manter verdadeiro na interface pública: a disponibilidade
  * mostrada vem da contagem real de exemplares, os créditos indicam o papel
  * correto, e nada quebra com título longo ou metadados ausentes.
+ *
+ * Sem fotografia, a capa é uma ficha tipográfica que repete título e crédito
+ * de forma decorativa (`aria-hidden`). As consultas por texto ignoram essa
+ * ficha: o que importa é o que leitores de tela recebem.
  */
+
+const VISIBLE = { ignore: "[aria-hidden='true'], [aria-hidden='true'] *, script, style" };
 
 function buildBook(overrides: Partial<BookCardRecord> = {}): BookCardRecord {
   return {
@@ -35,6 +41,7 @@ function buildBook(overrides: Partial<BookCardRecord> = {}): BookCardRecord {
     categories: [
       { category: { id: "c1", name: "Povos Indígenas", slug: "povos-indigenas" } },
     ],
+    copies: [{ status: "AVAILABLE" }],
     _count: { copies: 1 },
     ...overrides,
   } as BookCardRecord;
@@ -48,21 +55,36 @@ describe("BookCard", () => {
       screen.getByRole("link", { name: "Espírito das Periferias" }),
     ).toHaveAttribute("href", "/acervo/espirito-das-periferias");
     expect(
-      screen.getByText(/Ancestralidades Indígenas e Africanas/),
+      screen.getByText(/Ancestralidades Indígenas e Africanas/, VISIBLE),
     ).toBeInTheDocument();
-    expect(screen.getByText("Povos Indígenas")).toBeInTheDocument();
-    expect(screen.getByText("Nielson Rosa Bezerra")).toBeInTheDocument();
+    expect(screen.getByText("Povos Indígenas", VISIBLE)).toBeInTheDocument();
+    expect(screen.getByText("Nielson Rosa Bezerra", VISIBLE)).toBeInTheDocument();
   });
 
-  it("mostra disponibilidade a partir da contagem de exemplares livres", () => {
-    render(<BookCard book={buildBook({ _count: { copies: 2 } })} />);
-    expect(screen.getByText("Exemplar disponível")).toBeInTheDocument();
+  it("mostra a quantidade de exemplares livres", () => {
+    render(
+      <BookCard
+        book={buildBook({
+          copies: [{ status: "AVAILABLE" }, { status: "AVAILABLE" }],
+          _count: { copies: 2 },
+        })}
+      />,
+    );
+    expect(screen.getByText("2 exemplares disponíveis")).toBeInTheDocument();
   });
 
-  it("indica exemplar em uso quando nenhum está livre", () => {
-    render(<BookCard book={buildBook({ _count: { copies: 0 } })} />);
+  it("indica exemplar em uso quando existem exemplares, mas nenhum livre", () => {
+    render(
+      <BookCard book={buildBook({ copies: [{ status: "IN_USE" }], _count: { copies: 0 } })} />,
+    );
     expect(screen.getByText("Exemplar em uso")).toBeInTheDocument();
     expect(screen.queryByText("Exemplar disponível")).not.toBeInTheDocument();
+  });
+
+  it("distingue obra sem exemplar físico de exemplar em uso", () => {
+    render(<BookCard book={buildBook({ copies: [], _count: { copies: 0 } })} />);
+    expect(screen.getByText("Sem exemplar físico")).toBeInTheDocument();
+    expect(screen.queryByText("Exemplar em uso")).not.toBeInTheDocument();
   });
 
   it("não anuncia consulta digital sem arquivo autorizado", () => {
@@ -87,6 +109,13 @@ describe("BookCard", () => {
     expect(screen.getAllByRole("link")).toHaveLength(1);
   });
 
+  it("não expõe a ficha tipográfica a leitores de tela", () => {
+    const { container } = render(<BookCard book={buildBook()} />);
+    const fallback = container.querySelector("[aria-hidden='true'] .font-display");
+    expect(fallback?.textContent).toBe("Espírito das Periferias");
+    expect(screen.getAllByRole("heading")).toHaveLength(1);
+  });
+
   it("sinaliza obras não publicadas para a equipe", () => {
     render(<BookCard book={buildBook({ status: "DRAFT" })} />);
     expect(screen.getByText("Rascunho")).toBeInTheDocument();
@@ -96,9 +125,19 @@ describe("BookCard", () => {
     const longTitle =
       "Plano Nacional de Desenvolvimento Sustentável dos Povos e Comunidades Tradicionais de Matriz Africana";
     render(<BookCard book={buildBook({ title: longTitle })} />);
-    expect(screen.getByRole("link", { name: longTitle })).toHaveClass(
-      "line-clamp-3",
-    );
+    expect(screen.getByRole("link", { name: longTitle })).toHaveClass("line-clamp-3");
+  });
+});
+
+describe("texto de disponibilidade", () => {
+  it("usa singular e plural corretamente", () => {
+    expect(availabilityText(1, 1)).toBe("Exemplar disponível");
+    expect(availabilityText(3, 4)).toBe("3 exemplares disponíveis");
+  });
+
+  it("nunca afirma disponibilidade sem exemplar livre", () => {
+    expect(availabilityText(0, 2)).toBe("Exemplar em uso");
+    expect(availabilityText(0, 0)).toBe("Sem exemplar físico");
   });
 });
 

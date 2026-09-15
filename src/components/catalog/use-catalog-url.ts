@@ -1,7 +1,19 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useTransition } from "react";
+
+/** Parâmetros que representam filtro — `q`, `sort` e `page` não contam. */
+export const FILTER_KEYS = [
+  "category",
+  "subject",
+  "author",
+  "tag",
+  "type",
+  "availability",
+  "yearFrom",
+  "yearTo",
+] as const;
 
 /**
  * Manipulação dos filtros do acervo pela URL.
@@ -14,6 +26,7 @@ export function useCatalogUrl() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
 
   /** Monta a URL resultante da alteração de alguns parâmetros. */
   const buildUrl = useCallback(
@@ -40,19 +53,27 @@ export function useCatalogUrl() {
 
   const apply = useCallback(
     (changes: Record<string, string | number | null | undefined>) => {
-      router.push(buildUrl(changes), { scroll: false });
+      startTransition(() => {
+        router.push(buildUrl(changes), { scroll: false });
+      });
     },
     [buildUrl, router],
   );
 
+  /** Remove filtros e busca, preservando só a ordenação escolhida. */
   const clearAll = useCallback(() => {
-    router.push(pathname, { scroll: false });
-  }, [pathname, router]);
+    const sort = searchParams.get("sort");
+    startTransition(() => {
+      router.push(sort ? `${pathname}?sort=${sort}` : pathname, { scroll: false });
+    });
+  }, [pathname, router, searchParams]);
 
   const current = useCallback(
     (key: string) => searchParams.get(key) ?? undefined,
     [searchParams],
   );
 
-  return { buildUrl, apply, clearAll, current, searchParams };
+  const activeCount = FILTER_KEYS.filter((key) => searchParams.has(key)).length;
+
+  return { buildUrl, apply, clearAll, current, searchParams, isPending, activeCount };
 }

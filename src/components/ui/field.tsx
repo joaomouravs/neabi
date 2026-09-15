@@ -1,6 +1,14 @@
 "use client";
 
-import { createContext, useContext, useId, type ComponentProps, type ReactNode } from "react";
+import { Eye, EyeOff, TriangleAlert } from "lucide-react";
+import {
+  createContext,
+  useContext,
+  useId,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -34,7 +42,7 @@ function useField(): FieldContextValue {
 export interface FieldProps {
   children: ReactNode;
   error?: string | null;
-  description?: string | null;
+  description?: ReactNode;
   className?: string;
 }
 
@@ -50,7 +58,7 @@ export function Field({ children, error, description, className }: FieldProps) {
         hasDescription: Boolean(description),
       }}
     >
-      <div className={cn("flex flex-col gap-1.5", className)}>
+      <div className={cn("flex min-w-0 flex-col gap-1.5", className)}>
         {children}
         {description ? <FieldDescription>{description}</FieldDescription> : null}
         {error ? <FieldError>{error}</FieldError> : null}
@@ -69,17 +77,14 @@ export function FieldLabel({
   return (
     <label
       htmlFor={id}
-      className={cn(
-        "font-sans text-[0.8125rem] font-semibold text-ink-800",
-        className,
-      )}
+      className={cn("font-sans text-[0.8125rem] font-semibold text-ink-800", className)}
       {...props}
     >
       {children}
       {required ? (
         <>
           {" "}
-          <span className="text-neabi-red" aria-hidden="true">
+          <span className="text-neabi-red-600" aria-hidden="true">
             *
           </span>
           <span className="sr-only"> (obrigatório)</span>
@@ -105,9 +110,10 @@ function FieldError({ children }: { children: ReactNode }) {
       id={errorId}
       // `alert` faz leitores de tela anunciarem o erro assim que ele aparece.
       role="alert"
-      className="text-[0.8125rem] font-medium leading-snug text-neabi-red-700"
+      className="flex items-start gap-1.5 text-[0.8125rem] font-medium leading-snug text-neabi-red-700 motion-safe:animate-fade-in"
     >
-      {children}
+      <TriangleAlert aria-hidden="true" className="mt-px size-3.5 shrink-0" strokeWidth={2.25} />
+      <span>{children}</span>
     </p>
   );
 }
@@ -126,21 +132,61 @@ function useControlProps() {
   } as const;
 }
 
+/**
+ * Foco: borda escura mais contorno vermelho de 2px afastado do campo. A borda
+ * sozinha não basta — muda só 1px e some para quem enxerga pouco contraste.
+ */
 const controlBase = [
-  "w-full min-h-11 bg-white px-3 py-2.5",
+  "w-full min-h-12 bg-white px-3.5 py-2.5",
   "border border-ink-900/20",
-  "font-sans text-[0.9375rem] text-ink-900",
+  "font-sans text-base text-ink-900 sm:text-[0.9375rem]",
   "placeholder:text-ink-400",
-  "transition-colors duration-150",
-  "hover:border-ink-900/35",
-  "focus:border-ink-900 focus:outline-none",
+  "transition-[border-color,background-color,box-shadow] duration-150",
+  "hover:border-ink-900/40",
+  "focus:border-ink-900 focus-visible:outline-2 focus-visible:outline-offset-2",
   "disabled:cursor-not-allowed disabled:bg-neabi-cream-100 disabled:text-ink-500",
-  "aria-[invalid=true]:border-neabi-red aria-[invalid=true]:bg-neabi-red-050/40",
+  "aria-[invalid=true]:border-neabi-red-600 aria-[invalid=true]:bg-neabi-red-050/40",
 ].join(" ");
 
 export function Input({ className, ...props }: ComponentProps<"input">) {
   const controlProps = useControlProps();
   return <input {...controlProps} className={cn(controlBase, className)} {...props} />;
+}
+
+/**
+ * Senha com botão de mostrar/ocultar.
+ *
+ * O botão é um `aria-pressed` ligado ao campo — anuncia o estado, não só a
+ * ação — e fica fora da ordem de envio (`type="button"`).
+ */
+export function PasswordInput({ className, ...props }: ComponentProps<"input">) {
+  const controlProps = useControlProps();
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <div className="relative">
+      <input
+        {...controlProps}
+        {...props}
+        type={visible ? "text" : "password"}
+        className={cn(controlBase, "pr-12", className)}
+      />
+      <button
+        type="button"
+        onClick={() => setVisible((value) => !value)}
+        aria-pressed={visible}
+        aria-controls={controlProps.id}
+        className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-ink-500 transition-colors hover:text-ink-900 focus-visible:outline-offset-[-3px]"
+      >
+        {visible ? (
+          <EyeOff aria-hidden="true" className="size-[1.125rem]" />
+        ) : (
+          <Eye aria-hidden="true" className="size-[1.125rem]" />
+        )}
+        <span className="sr-only">{visible ? "Ocultar senha" : "Mostrar senha"}</span>
+      </button>
+    </div>
+  );
 }
 
 export function Textarea({ className, ...props }: ComponentProps<"textarea">) {
@@ -161,7 +207,7 @@ export function Select({ className, children, ...props }: ComponentProps<"select
       {...controlProps}
       className={cn(
         controlBase,
-        "cursor-pointer appearance-none bg-[length:11px] bg-[right_0.85rem_center] bg-no-repeat pr-9",
+        "cursor-pointer appearance-none bg-[length:11px] bg-[right_0.95rem_center] bg-no-repeat pr-10",
         "bg-[image:url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 11 7\"><path d=\"M1 1l4.5 4.5L10 1\" fill=\"none\" stroke=\"%234D4842\" stroke-width=\"1.6\"/></svg>')]",
         className,
       )}
@@ -194,11 +240,11 @@ export function CheckboxField({
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
           className={cn(
-            "mt-0.5 size-5 shrink-0 cursor-pointer appearance-none border border-ink-900/35 bg-white",
-            "checked:border-neabi-red checked:bg-neabi-red",
+            "mt-0.5 size-5 shrink-0 cursor-pointer appearance-none border border-ink-900/35 bg-white transition-colors",
+            "checked:border-neabi-red-600 checked:bg-neabi-red-600",
             "checked:bg-[length:12px] checked:bg-center checked:bg-no-repeat",
             "checked:bg-[image:url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 12 10\"><path d=\"M1 5l3.2 3.2L11 1.4\" fill=\"none\" stroke=\"white\" stroke-width=\"2\"/></svg>')]",
-            "aria-[invalid=true]:border-neabi-red",
+            "aria-[invalid=true]:border-neabi-red-600",
             "disabled:cursor-not-allowed disabled:opacity-50",
           )}
           {...props}
@@ -214,9 +260,10 @@ export function CheckboxField({
         <p
           id={errorId}
           role="alert"
-          className="pl-8 text-[0.8125rem] font-medium text-neabi-red-700"
+          className="flex items-start gap-1.5 pl-8 text-[0.8125rem] font-medium text-neabi-red-700"
         >
-          {error}
+          <TriangleAlert aria-hidden="true" className="mt-px size-3.5 shrink-0" strokeWidth={2.25} />
+          <span>{error}</span>
         </p>
       ) : null}
     </div>

@@ -1,13 +1,16 @@
+import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
 import {
   Container,
+  Eyebrow,
   NeabiRule,
-  SectionHeading,
+  PageHeader,
 } from "@/components/layout/primitives";
 import { Button } from "@/components/ui/button";
-import { prisma } from "@/lib/prisma";
+import { cn } from "@/lib/utils";
+import { getPublicCatalogStats } from "@/server/repositories/book-repository";
 import { getSettings } from "@/server/repositories/settings-repository";
 
 export const metadata: Metadata = {
@@ -44,150 +47,226 @@ const PILLARS = [
   },
 ];
 
+const LAWS = [
+  {
+    number: "10.639/2003",
+    body: "Torna obrigatório o ensino de história e cultura afro-brasileira e africana na educação básica.",
+  },
+  {
+    number: "11.645/2008",
+    body: "Amplia a obrigatoriedade para incluir a história e a cultura dos povos indígenas.",
+  },
+];
+
+const PILLAR_ACCENTS = ["border-t-neabi-red", "border-t-neabi-amber", "border-t-neabi-green"];
+
 export default async function AboutPage() {
-  const [settings, bookCount, categoryCount] = await Promise.all([
-    getSettings(),
-    prisma.book.count({ where: { status: "PUBLISHED" } }),
-    prisma.category.count(),
-  ]);
+  const [settings, stats] = await Promise.all([getSettings(), getPublicCatalogStats()]);
 
   return (
     <>
-      <section className="relative overflow-hidden bg-neabi-black">
-        <div
-          aria-hidden="true"
-          className="neabi-pattern-rows pointer-events-none absolute inset-0 text-neabi-cream opacity-[0.06]"
-        />
-        <Container className="relative py-20 sm:py-28">
-          <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-neabi-amber">
-            Sobre
-          </p>
-          <h1 className="mt-4 max-w-4xl text-balance font-display text-[clamp(2.5rem,7vw,5rem)] font-bold leading-[0.95] text-neabi-cream">
-            Núcleo de Estudos Afro-Brasileiros e Indígenas
-          </h1>
-          <NeabiRule className="mt-7 w-28" />
-          <p className="mt-7 max-w-2xl text-pretty text-lg leading-relaxed text-neabi-cream/75">
-            {settings.institution} — {settings.campus}
-          </p>
-        </Container>
-      </section>
+      <PageHeader
+        tone="dark"
+        eyebrow="Sobre o núcleo"
+        title="Núcleo de Estudos Afro-Brasileiros e Indígenas"
+        breadcrumbs={[{ href: "/", label: "Início" }, { label: "Sobre" }]}
+        description={`${settings.institution} — ${settings.campus}. Ensino, pesquisa, extensão e um acervo aberto à comunidade.`}
+      >
+        <dl className="grid grid-cols-3 gap-6 border-t border-neabi-cream/15 pt-6 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0">
+          {[
+            { value: stats.books, label: stats.books === 1 ? "obra" : "obras" },
+            { value: stats.categories, label: stats.categories === 1 ? "eixo" : "eixos" },
+            { value: stats.totalCopies, label: stats.totalCopies === 1 ? "exemplar" : "exemplares" },
+          ].map((item) => (
+            <div key={item.label} className="flex flex-col-reverse gap-1">
+              <dt className="text-[0.8125rem] text-neabi-cream/65">{item.label}</dt>
+              <dd className="font-display text-[2.5rem] font-bold leading-none tabular-nums text-neabi-cream">
+                {item.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </PageHeader>
 
-      <Container className="py-20 sm:py-24">
-        <div className="grid gap-14 lg:grid-cols-[1.3fr_1fr] lg:gap-20">
-          <div className="max-w-prose">
-            <SectionHeading
-              eyebrow="O NEABI"
-              title="Conhecimento como reparação"
-              level={2}
-            />
-            <div className="mt-7 space-y-5 text-[1.0625rem] leading-relaxed text-ink-800">
-              <p className="text-pretty">
+      {/* Conhecimento como reparação */}
+      <section aria-labelledby="reparacao-titulo" className="section-y">
+        <Container className="grid gap-10 lg:grid-cols-12 lg:gap-12">
+          <div className="lg:col-span-4">
+            <div className="lg:sticky lg:top-[calc(var(--header-height-compact)+2rem)]">
+              <Eyebrow>O NEABI</Eyebrow>
+              <h2
+                id="reparacao-titulo"
+                className="mt-4 text-balance font-display text-display-md font-bold text-ink-900"
+              >
+                Conhecimento como reparação
+              </h2>
+              <NeabiRule className="mt-6" />
+            </div>
+          </div>
+
+          <div className="max-w-[42rem] lg:col-span-8 lg:col-start-5">
+            <div className="space-y-5 text-pretty text-lede text-ink-800">
+              <p>
                 Os Núcleos de Estudos Afro-Brasileiros e Indígenas existem nas
                 instituições federais de ensino como espaços de articulação entre
                 ensino, pesquisa e extensão em torno das relações étnico-raciais.
                 São, ao mesmo tempo, lugares de estudo e de ação.
               </p>
-              <p className="text-pretty">
+              <p>
                 No {settings.institution}, {settings.campus}, o NEABI atua em um
                 território marcado pela presença histórica de populações negras e
-                indígenas — a Baixada Fluminense. Essa localização não é detalhe
-                geográfico: ela orienta as perguntas que o núcleo faz e o acervo
-                que reúne.
-              </p>
-              <p className="text-pretty">
-                A Biblioteca NEABI organiza esse acervo e o torna acessível.
-                Publicações acadêmicas, cadernos de pesquisa, cartilhas,
-                inventários de patrimônio, planos nacionais e obras de referência
-                convivem no mesmo catálogo, porque juntos compõem o registro de
-                um campo de conhecimento.
+                indígenas — a Baixada Fluminense.
               </p>
             </div>
 
-            <h2 className="mt-14 font-display text-2xl font-semibold text-ink-900">
+            <figure className="my-10 border-l-4 border-neabi-red py-1 pl-6 sm:my-12 sm:pl-8">
+              <blockquote>
+                <p className="text-balance font-display text-[clamp(1.75rem,3.4vw,2.5rem)] font-semibold leading-[1.08] text-ink-900">
+                  Essa localização não é detalhe geográfico: ela orienta as perguntas
+                  que o núcleo faz e o acervo que reúne.
+                </p>
+              </blockquote>
+            </figure>
+
+            <div className="space-y-5 text-pretty text-lede text-ink-800">
+              <p>
+                A Biblioteca NEABI organiza esse acervo e o torna acessível.
+                Publicações acadêmicas, cadernos de pesquisa, cartilhas, inventários
+                de patrimônio, planos nacionais e obras de referência convivem no
+                mesmo catálogo, porque juntos compõem o registro de um campo de
+                conhecimento.
+              </p>
+            </div>
+          </div>
+        </Container>
+      </section>
+
+      {/* Missão */}
+      <section
+        aria-labelledby="missao-titulo"
+        className="section-y relative overflow-hidden border-y border-border bg-surface-muted"
+      >
+        <div
+          aria-hidden="true"
+          className="neabi-pattern-lines pointer-events-none absolute inset-y-0 right-0 w-1/2 text-ink-900 opacity-[0.04] [mask-image:linear-gradient(to_left,black,transparent)]"
+        />
+        <Container className="relative grid gap-8 lg:grid-cols-12 lg:gap-12">
+          <div className="lg:col-span-3">
+            <h2 id="missao-titulo" className="eyebrow text-neabi-red-600">
               Missão
             </h2>
-            <p className="mt-3 max-w-prose text-pretty text-[1.0625rem] leading-relaxed text-ink-800">
-              Contribuir para uma educação antirracista, promover a produção e a
-              circulação de conhecimento sobre populações afro-brasileiras e
-              indígenas, e garantir que esse conhecimento chegue a quem dele
-              precisa — dentro e fora da instituição.
+          </div>
+          <p className="max-w-4xl text-balance font-display text-[clamp(1.875rem,4vw,3rem)] font-semibold leading-[1.06] text-ink-900 lg:col-span-9">
+            Contribuir para uma educação antirracista, promover a produção e a
+            circulação de conhecimento sobre populações afro-brasileiras e indígenas
+            e garantir que esse conhecimento chegue a quem dele precisa — dentro e
+            fora da instituição.
+          </p>
+        </Container>
+      </section>
+
+      {/* Como o núcleo trabalha */}
+      <section aria-labelledby="frentes-titulo" className="section-y">
+        <Container>
+          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-2xl">
+              <Eyebrow>Frentes de atuação</Eyebrow>
+              <h2
+                id="frentes-titulo"
+                className="mt-4 text-balance font-display text-display-md font-bold text-ink-900"
+              >
+                Como o núcleo trabalha
+              </h2>
+            </div>
+            <p className="max-w-md text-[0.9375rem] leading-relaxed text-ink-600">
+              Seis frentes que se alimentam: a pesquisa informa a formação, a
+              extensão traz perguntas da comunidade, a biblioteca guarda o que fica.
             </p>
           </div>
 
-          <aside>
-            <div className="border border-border-strong bg-surface">
-              <div aria-hidden="true" className="neabi-rule h-1 w-full" />
-              <div className="p-6">
-                <h2 className="font-display text-lg font-semibold text-ink-900">
-                  A biblioteca hoje
-                </h2>
-                <dl className="mt-5 flex flex-col gap-5">
-                  <div>
-                    <dt className="text-[0.75rem] uppercase tracking-[0.1em] text-ink-500">
-                      Obras publicadas
-                    </dt>
-                    <dd className="mt-1 font-display text-4xl font-bold leading-none tabular-nums text-ink-900">
-                      {bookCount}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-[0.75rem] uppercase tracking-[0.1em] text-ink-500">
-                      Eixos temáticos
-                    </dt>
-                    <dd className="mt-1 font-display text-4xl font-bold leading-none tabular-nums text-ink-900">
-                      {categoryCount}
-                    </dd>
-                  </div>
-                </dl>
-                <p className="mt-6 border-t border-border pt-5 text-[0.875rem] leading-relaxed text-ink-600">
-                  O acervo é catalogado de forma progressiva. Obras com dados
-                  bibliográficos ainda não conferidos aparecem sinalizadas — os
-                  campos ficam vazios em vez de receber informação estimada.
+          <ol className="mt-10 grid gap-x-8 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
+            {PILLARS.map((pillar, index) => (
+              <li
+                key={pillar.title}
+                className={cn(
+                  "border-t-2 pb-8 pt-6",
+                  PILLAR_ACCENTS[index % PILLAR_ACCENTS.length],
+                )}
+              >
+                <p aria-hidden="true" className="font-sans text-[0.75rem] font-semibold tabular-nums text-ink-500">
+                  {String(index + 1).padStart(2, "0")}
                 </p>
-                <div className="mt-6">
-                  <Button asChild className="w-full">
-                    <Link href="/acervo">Explorar o acervo</Link>
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </aside>
-        </div>
-      </Container>
-
-      <section className="border-t border-border bg-surface-muted py-20 sm:py-24">
-        <Container>
-          <SectionHeading
-            eyebrow="Frentes de atuação"
-            title="Como o núcleo trabalha"
-            level={2}
-          />
-          <ul className="mt-12 grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-3">
-            {PILLARS.map((pillar) => (
-              <li key={pillar.title} className="bg-background p-6">
-                <h3 className="font-display text-xl font-semibold text-ink-900">
+                <h3 className="mt-3 font-display text-[1.75rem] font-bold leading-tight text-ink-900">
                   {pillar.title}
                 </h3>
-                <p className="mt-2.5 text-pretty text-[0.9375rem] leading-relaxed text-ink-600">
+                <p className="mt-3 text-pretty text-[0.9375rem] leading-relaxed text-ink-600">
                   {pillar.body}
                 </p>
               </li>
             ))}
-          </ul>
+          </ol>
         </Container>
       </section>
 
-      <Container className="py-20">
-        <div className="flex flex-col items-start gap-6 border-l-2 border-neabi-red pl-6 sm:pl-8">
-          <p className="max-w-2xl text-balance font-display text-[clamp(1.5rem,3.5vw,2.25rem)] font-semibold leading-tight text-ink-900">
-            O acervo cresce com a comunidade. Doações, indicações de obras e
-            parcerias são bem-vindas.
-          </p>
-          <Button asChild size="lg">
-            <Link href="/contato">Falar com o NEABI</Link>
-          </Button>
-        </div>
-      </Container>
+      {/* Marcos legais */}
+      <section aria-labelledby="leis-titulo" className="on-dark relative overflow-hidden bg-neabi-black text-neabi-cream">
+        <div
+          aria-hidden="true"
+          className="neabi-pattern pointer-events-none absolute inset-0 text-neabi-cream opacity-[0.045]"
+        />
+        <Container className="section-y relative grid gap-10 lg:grid-cols-12 lg:gap-12">
+          <div className="lg:col-span-4">
+            <Eyebrow tone="dark">Marcos legais</Eyebrow>
+            <h2 id="leis-titulo" className="mt-4 text-balance font-display text-display-sm font-bold">
+              A lei que o acervo ajuda a cumprir
+            </h2>
+          </div>
+          <dl className="grid gap-8 sm:grid-cols-2 lg:col-span-8">
+            {LAWS.map((law) => (
+              <div key={law.number} className="border-t border-neabi-cream/20 pt-6">
+                <dt className="font-display text-[clamp(2.5rem,5vw,3.5rem)] font-bold leading-none tabular-nums text-neabi-amber">
+                  <span className="sr-only">Lei </span>
+                  {law.number}
+                </dt>
+                <dd className="mt-3 max-w-sm text-[1rem] leading-relaxed text-neabi-cream/80">
+                  {law.body}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </Container>
+      </section>
+
+      {/* Chamada final */}
+      <section aria-labelledby="comunidade-titulo" className="section-y">
+        <Container>
+          <div className="grid gap-8 border border-border-strong bg-surface p-6 sm:p-10 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-16">
+            <div>
+              <h2
+                id="comunidade-titulo"
+                className="max-w-2xl text-balance font-display text-[clamp(1.75rem,3.5vw,2.5rem)] font-bold leading-tight text-ink-900"
+              >
+                O acervo cresce com a comunidade.
+              </h2>
+              <p className="mt-3 max-w-xl text-[1.0625rem] leading-relaxed text-ink-600">
+                Doações, indicações de obras e parcerias são bem-vindas. Fale com a
+                equipe ou comece explorando o que já está catalogado.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row lg:flex-col xl:flex-row">
+              <Button asChild size="lg">
+                <Link href="/contato">
+                  Falar com o NEABI
+                  <ArrowRight aria-hidden="true" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="lg">
+                <Link href="/acervo">Explorar o acervo</Link>
+              </Button>
+            </div>
+          </div>
+        </Container>
+      </section>
     </>
   );
 }

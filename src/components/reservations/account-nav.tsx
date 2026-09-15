@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { logoutAction } from "@/features/auth/actions";
 import { cn } from "@/lib/utils";
 
 export interface AccountNavItem {
@@ -13,30 +12,32 @@ export interface AccountNavItem {
 }
 
 /**
- * Navegação lateral da área do usuário.
+ * Abas da área da conta.
  *
- * Vira uma barra rolável horizontal em telas estreitas — não um menu desktop
- * espremido.
+ * Uma única fileira em todas as larguras — rolável no celular, nunca um menu
+ * desktop espremido. `relative` dá contexto de posicionamento ao contêiner
+ * rolável: sem ele, qualquer descendente absoluto escapa do recorte e faz a
+ * página inteira rolar na horizontal.
  */
-export function AccountNav({ items }: { items: AccountNavItem[] }) {
+export function AccountNav({ items, className }: { items: AccountNavItem[]; className?: string }) {
   const pathname = usePathname();
 
   const isActive = (item: AccountNavItem) =>
     item.exact ? pathname === item.href : pathname.startsWith(item.href);
 
   return (
-    <nav aria-label="Navegação da conta" className="lg:w-56 lg:shrink-0">
-      <ul className="-mx-5 flex gap-1 overflow-x-auto px-5 pb-2 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0 lg:pb-0">
+    <nav aria-label="Navegação da conta" className={cn("-mx-5 md:mx-0", className)}>
+      <ul className="scrollbar-none relative flex gap-6 overflow-x-auto px-5 md:gap-8 md:px-0">
         {items.map((item) => (
-          <li key={item.href} className="shrink-0 lg:shrink">
+          <li key={item.href} className="shrink-0">
             <Link
               href={item.href}
               aria-current={isActive(item) ? "page" : undefined}
               className={cn(
-                "flex min-h-11 items-center whitespace-nowrap border-b-2 px-3 font-sans text-[0.9375rem] font-medium transition-colors lg:border-b-0 lg:border-l-2 lg:px-4",
+                "flex min-h-12 items-center whitespace-nowrap border-b-2 font-sans text-[0.9375rem] font-medium transition-colors",
                 isActive(item)
-                  ? "border-neabi-red text-ink-900"
-                  : "border-transparent text-ink-500 hover:text-ink-900 lg:hover:border-border-strong",
+                  ? "border-neabi-red-600 text-ink-900"
+                  : "border-transparent text-ink-600 hover:border-ink-300 hover:text-ink-900",
               )}
             >
               {item.label}
@@ -44,15 +45,6 @@ export function AccountNav({ items }: { items: AccountNavItem[] }) {
           </li>
         ))}
       </ul>
-
-      <form action={logoutAction} className="mt-6 hidden lg:block">
-        <button
-          type="submit"
-          className="px-4 font-sans text-[0.875rem] font-medium text-ink-500 underline underline-offset-4 hover:text-neabi-red-700"
-        >
-          Sair da conta
-        </button>
-      </form>
     </nav>
   );
 }

@@ -1,6 +1,14 @@
+import { Library, Plus } from "lucide-react";
 import Link from "next/link";
 
-import { AdminPage, AdminTable, Td, Th } from "@/components/admin/admin-ui";
+import {
+  AdminFilterTabs,
+  AdminPage,
+  AdminTable,
+  Td,
+  Th,
+  adminLinkClass,
+} from "@/components/admin/admin-ui";
 import { AdminSearch } from "@/components/admin/admin-search";
 import { Pagination } from "@/components/catalog/pagination";
 import { Badge } from "@/components/ui/badge";
@@ -45,13 +53,10 @@ export default async function AdminBooksPage({
     ...(status && Object.values(BookStatus).includes(status as BookStatus)
       ? { status: status as BookStatus }
       : {}),
-    ...(cataloging &&
-    Object.values(CatalogingStatus).includes(cataloging as CatalogingStatus)
+    ...(cataloging && Object.values(CatalogingStatus).includes(cataloging as CatalogingStatus)
       ? { catalogingStatus: cataloging as CatalogingStatus }
       : {}),
-    ...(term.length > 0
-      ? { searchText: { contains: escapeLike(normalizeText(term)) } }
-      : {}),
+    ...(term.length > 0 ? { searchText: { contains: escapeLike(normalizeText(term)) } } : {}),
   };
 
   const [books, total] = await Promise.all([
@@ -67,12 +72,7 @@ export default async function AdminBooksPage({
         catalogingStatus: true,
         year: true,
         updatedAt: true,
-        _count: {
-          select: {
-            copies: true,
-            reservations: true,
-          },
-        },
+        _count: { select: { copies: true, reservations: true } },
         copies: { where: { status: CopyStatus.AVAILABLE }, select: { id: true } },
         contributors: {
           select: { person: { select: { name: true } } },
@@ -101,65 +101,55 @@ export default async function AdminBooksPage({
     return `/admin/acervo${query ? `?${query}` : ""}`;
   };
 
+  const needsReviewActive = cataloging === CatalogingStatus.NEEDS_REVIEW;
+
   return (
     <AdminPage
+      eyebrow="Acervo"
       title="Acervo"
       description={`${total} ${total === 1 ? "obra cadastrada" : "obras cadastradas"}.`}
       action={
         <Button asChild>
-          <Link href="/admin/acervo/novo">Cadastrar obra</Link>
+          <Link href="/admin/acervo/novo">
+            <Plus aria-hidden="true" />
+            Cadastrar obra
+          </Link>
         </Button>
       }
     >
       <div className="flex flex-col gap-4">
-        <div className="max-w-md">
+        <div className="max-w-xl">
           <AdminSearch
             placeholder="Buscar por título, autoria, editora, assunto ou ISBN"
             defaultValue={term}
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {STATUS_TABS.map((tab) => (
-            <Link
-              key={tab.value || "todas"}
-              href={buildHref({ status: tab.value || undefined, page: 1 })}
-              aria-current={(status ?? "") === tab.value ? "true" : undefined}
-              className={
-                (status ?? "") === tab.value
-                  ? "border border-neabi-black bg-neabi-black px-3 py-1.5 font-sans text-[0.8125rem] font-medium text-neabi-cream"
-                  : "border border-ink-900/20 px-3 py-1.5 font-sans text-[0.8125rem] text-ink-700 hover:border-ink-900/45"
-              }
-            >
-              {tab.label}
-            </Link>
-          ))}
-
-          <Link
-            href={buildHref({
-              cataloging:
-                cataloging === CatalogingStatus.NEEDS_REVIEW
-                  ? undefined
-                  : CatalogingStatus.NEEDS_REVIEW,
-              page: 1,
-            })}
-            aria-current={
-              cataloging === CatalogingStatus.NEEDS_REVIEW ? "true" : undefined
-            }
-            className={
-              cataloging === CatalogingStatus.NEEDS_REVIEW
-                ? "border border-neabi-amber-700 bg-neabi-amber-050 px-3 py-1.5 font-sans text-[0.8125rem] font-medium text-neabi-amber-900"
-                : "border border-ink-900/20 px-3 py-1.5 font-sans text-[0.8125rem] text-ink-700 hover:border-ink-900/45"
-            }
-          >
-            Dados incompletos
-          </Link>
-        </div>
+        <AdminFilterTabs
+          label="Filtrar obras"
+          items={[
+            ...STATUS_TABS.map((tab) => ({
+              href: buildHref({ status: tab.value || undefined, page: 1 }),
+              label: tab.label,
+              active: (status ?? "") === tab.value,
+            })),
+            {
+              href: buildHref({
+                cataloging: needsReviewActive ? undefined : CatalogingStatus.NEEDS_REVIEW,
+                page: 1,
+              }),
+              label: "Dados incompletos",
+              active: needsReviewActive,
+              tone: "amber" as const,
+            },
+          ]}
+        />
       </div>
 
       <div className="mt-6">
         {books.length === 0 ? (
           <EmptyState
+            icon={Library}
             title="Nenhuma obra encontrada"
             description="Ajuste a busca ou os filtros, ou cadastre uma nova obra."
             action={
@@ -178,12 +168,14 @@ export default async function AdminBooksPage({
                 <Th className="text-center">Exemplares</Th>
                 <Th>Situação</Th>
                 <Th>Atualizada</Th>
-                <Th><span className="sr-only">Ações</span></Th>
+                <Th>
+                  <span className="sr-only">Ações</span>
+                </Th>
               </>
             }
           >
             {books.map((book) => (
-              <tr key={book.id} className="hover:bg-surface-muted">
+              <tr key={book.id} className="transition-colors hover:bg-surface-muted">
                 <Td className="max-w-md">
                   <Link
                     href={`/admin/acervo/${book.id}`}
@@ -194,9 +186,7 @@ export default async function AdminBooksPage({
                   <p className="mt-0.5 line-clamp-1 text-[0.8125rem] text-ink-500">
                     {[
                       book.subtitle,
-                      book.contributors
-                        .map((entry) => entry.person.name)
-                        .join("; "),
+                      book.contributors.map((entry) => entry.person.name).join("; "),
                       book.year,
                     ]
                       .filter(Boolean)
@@ -213,7 +203,7 @@ export default async function AdminBooksPage({
                 </Td>
                 <Td className="text-center tabular-nums">
                   <span className="text-ink-900">{book.copies.length}</span>
-                  <span className="text-ink-400"> / {book._count.copies}</span>
+                  <span className="text-ink-500"> / {book._count.copies}</span>
                 </Td>
                 <Td>
                   <Badge
@@ -229,20 +219,15 @@ export default async function AdminBooksPage({
                     {bookStatusLabels[book.status]}
                   </Badge>
                 </Td>
-                <Td className="whitespace-nowrap text-ink-500">
-                  {formatDate(book.updatedAt)}
-                </Td>
+                <Td className="whitespace-nowrap text-ink-500">{formatDate(book.updatedAt)}</Td>
                 <Td className="whitespace-nowrap text-right">
-                  <Link
-                    href={`/admin/acervo/${book.id}`}
-                    className="text-[0.8125rem] font-semibold text-neabi-red-600 underline underline-offset-4"
-                  >
+                  <Link href={`/admin/acervo/${book.id}`} className={adminLinkClass}>
                     Editar
                   </Link>
                   {book.status === BookStatus.PUBLISHED ? (
                     <Link
                       href={`/acervo/${book.slug}`}
-                      className="ml-3 text-[0.8125rem] text-ink-500 underline underline-offset-4"
+                      className="ml-3 text-[0.8125rem] text-ink-600 underline underline-offset-4 hover:text-ink-900"
                     >
                       Ver
                     </Link>

@@ -1,5 +1,8 @@
+import { cache } from "react";
+
 import { BookStatus, CopyStatus, Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { rankByRelevance } from "@/lib/relevance";
 import { escapeLike, tokenizeQuery } from "@/lib/text";
 import type { CatalogSearchParams } from "@/validators/search";
 
@@ -38,6 +41,9 @@ export const bookCardSelect = {
     select: { category: { select: { id: true, name: true, slug: true } } },
     take: 3,
   },
+  // Situação de cada exemplar: permite distinguir "em uso" de "sem exemplar"
+  // e mostrar quantos existem. São poucos por obra — o custo é desprezível.
+  copies: { select: { status: true } },
   _count: {
     select: {
       copies: { where: { status: CopyStatus.AVAILABLE } },
@@ -255,6 +261,125 @@ export async function searchBooks(
     perPage,
     totalPages: Math.max(1, Math.ceil(total / perPage)),
   };
+}
+
+export interface PublicCatalogStats {
+  books: number;
+  categories: number;
+  totalCopies: number;
+  availableCopies: number;
+}
+
+/**
+ * Números do acervo publicado.
+ *
+ * Memoizados por requisição: o hero, a seção "Descubra o acervo" e o bloco
+ * institucional da home leem a mesma contagem. Exemplares extraviados não
+ * contam como acervo.
+ */
+export const getPublicCatalogStats = cache(async (): Promise<PublicCatalogStats> => {
+  const publishedBook = { status: BookStatus.PUBLISHED };
+  const [books, categories, totalCopies, availableCopies] = await Promise.all([
+    prisma.book.count({ where: publishedBook }),
+    prisma.category.count({
+      where: { books: { some: { book: publishedBook } } },
+    }),
+    prisma.physicalCopy.count({
+      where: { book: publishedBook, status: { not: CopyStatus.LOST } },
+    }),
+    prisma.physicalCopy.count({
+      where: { book: publishedBook, status: CopyStatus.AVAILABLE },
+    }),
+  ]);
+  return { books, categories, totalCopies, availableCopies };
+});
+
+/**
+ * Sugestões rápidas da busca.
+ *
+ * Usa a mesma cláusula `where` do acervo — o que aparece na sugestão é
+ * exatamente o que o Enter vai encontrar em `/acervo?q=…`.
+ */
+export async function findSearchSuggestions(
+  q: string,
+  limit = 6,
+): Promise<{ items: BookCardRecord[]; total: number }> {
+  const where = buildBookWhere({
+    q,
+    sort: "recentes",
+    page: 1,
+    perPage: limit,
+  });
+
+  // Candidatos mais acessados primeiro; a ordem final vem da relevância.
+  const [candidates, total] = await Promise.all([
+    prisma.book.findMany({
+      where,
+      select: bookCardSelect,
+      orderBy: [{ viewCount: "desc" }, { title: "asc" }],
+      take: Math.max(limit * 6, 36),
+    }),
+    prisma.book.count({ where }),
+  ]);
+
+  return { items: rankByRelevance(candidates, q).slice(0, limit), total };
+}
+
+
+/**
+ * Obras cujo texto indexado menciona um território.
+ *
+ * Alimenta a seção "Memória e território" da home a partir do que está
+ * catalogado — nenhum slug fixo no código.
+ */
+export function findBooksMentioning(
+  term: string,
+  limit = 4,
+): Promise<BookCardRecord[]> {
+  return prisma.book.findMany({
+    where: buildBookWhere({ q: `"${term}"`, sort: "recentes", page: 1, perPage: limit }),
+    select: bookCardSelect,
+    orderBy: [{ featured: "desc" }, { viewCount: "desc" }, { title: "asc" }],
+    take: limit,
+  });
+}
+
+/**
+ * Obras catalogadas mais recentemente, com o intervalo de datas do acervo.
+ *
+ * O intervalo permite à home decidir se "recém-catalogadas" diz algo real:
+ * quando o acervo inteiro entrou no mesmo dia, a seção seria só uma repetição
+ * dos destaques com outro nome.
+ */
+export async function findRecentlyCataloged(limit = 4): Promise<{
+  items: BookCardRecord[];
+  spanDays: number;
+}> {
+  const [items, range] = await Promise.all([
+    prisma.book.findMany({
+      where: { status: BookStatus.PUBLISHED },
+      select: bookCardSelect,
+      orderBy: [
+        { publishedAt: { sort: "desc", nulls: "last" } },
+        { createdAt: "desc" },
+      ],
+      take: limit,
+    }),
+    prisma.book.aggregate({
+      where: { status: BookStatus.PUBLISHED, publishedAt: { not: null } },
+      _min: { publishedAt: true },
+      _max: { publishedAt: true },
+    }),
+  ]);
+
+  const min = range._min.publishedAt?.getTime();
+  const max = range._max.publishedAt?.getTime();
+  const spanDays =
+    min !== undefined && max !== undefined
+      ? Math.floor((max - min) / 86_400_000)
+      : 0;
+
+  return { items, spanDays };
 }
 
 // ---------------------------------------------------------------------------

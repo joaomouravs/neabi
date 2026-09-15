@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
 
+import { BackToTop } from "@/components/layout/back-to-top";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { getSessionUser } from "@/server/auth/session";
 import { canAccessAdmin } from "@/server/permissions/rbac";
 import { getSettings } from "@/server/repositories/settings-repository";
+import { listCategoriesWithCounts } from "@/server/repositories/taxonomy-repository";
 
 /**
  * Casca do site público.
@@ -14,7 +16,11 @@ import { getSettings } from "@/server/repositories/settings-repository";
  * atravessar o cabeçalho inteiro a cada página.
  */
 export default async function SiteLayout({ children }: { children: ReactNode }) {
-  const [user, settings] = await Promise.all([getSessionUser(), getSettings()]);
+  const [user, settings, categories] = await Promise.all([
+    getSessionUser(),
+    getSettings(),
+    listCategoriesWithCounts(),
+  ]);
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -37,11 +43,22 @@ export default async function SiteLayout({ children }: { children: ReactNode }) 
         }
       />
 
-      <main id="conteudo" className="flex-1">
+      {/* `tabIndex={-1}` recebe o foco do "pular conteúdo" e do "voltar ao
+          topo" sem entrar na ordem de tabulação. */}
+      <main id="conteudo" tabIndex={-1} className="flex-1 focus:outline-none">
         {children}
       </main>
 
-      <SiteFooter settings={settings} />
+      <SiteFooter
+        settings={settings}
+        signedIn={Boolean(user)}
+        categories={categories
+          .filter((category) => category.bookCount > 0)
+          .sort((a, b) => b.bookCount - a.bookCount)
+          .map(({ slug, name }) => ({ slug, name }))}
+      />
+
+      <BackToTop />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { Calendar } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -14,28 +15,29 @@ export const metadata: Metadata = {
 
 export default async function MyReservationsPage() {
   const actor = await requireActor();
-  const { active } = await listUserReservations(actor.id);
+  const { active, history } = await listUserReservations(actor.id);
 
   return (
     <section aria-labelledby="reservas-titulo">
-      <h2
-        id="reservas-titulo"
-        className="font-display text-2xl font-semibold text-ink-900"
-      >
+      <h2 id="reservas-titulo" className="font-display text-[1.875rem] font-bold leading-tight text-ink-900">
         Reservas em andamento
       </h2>
-      <p className="mt-2 max-w-prose text-[0.9375rem] leading-relaxed text-ink-600">
-        Solicitações aguardando análise, aprovadas, prontas para retirada ou em
-        consulta.
+      <p className="mt-1.5 max-w-prose text-[0.9375rem] leading-relaxed text-ink-600">
+        Solicitações aguardando análise, aprovadas, prontas para retirada ou em consulta.
       </p>
 
-      <div className="mt-8">
+      <div className="mt-7">
         {active.length === 0 ? (
           <EmptyState
+            icon={Calendar}
             title="Nenhuma reserva em andamento"
-            description="Quando você solicitar a consulta de uma obra, ela aparecerá aqui com o número de protocolo e a situação atualizada."
+            description={
+              history.length > 0
+                ? "Suas reservas anteriores estão no histórico. Quando você solicitar outra obra, ela aparecerá aqui."
+                : "Você ainda não possui reservas. Quando solicitar a consulta de uma obra, ela aparecerá aqui com o protocolo e a situação atualizada."
+            }
             action={
-              <Button asChild>
+              <Button asChild size="lg">
                 <Link href="/acervo">Explorar o acervo</Link>
               </Button>
             }

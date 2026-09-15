@@ -23,22 +23,11 @@ export const mainNavigation = [
   { href: "/contato", label: "Contato" },
 ] as const;
 
-export const adminNavigation = [
-  { href: "/admin", label: "Visão geral", exact: true },
-  { href: "/admin/acervo", label: "Acervo" },
-  { href: "/admin/exemplares", label: "Exemplares" },
-  { href: "/admin/categorias", label: "Categorias" },
-  { href: "/admin/reservas", label: "Reservas" },
-  { href: "/admin/usuarios", label: "Usuários" },
-  { href: "/admin/arquivos", label: "Arquivos" },
-  { href: "/admin/analytics", label: "Analytics" },
-  { href: "/admin/configuracoes", label: "Configurações" },
-] as const;
-
 export const accountNavigation = [
-  { href: "/minha-conta", label: "Perfil", exact: true },
+  { href: "/minha-conta", label: "Visão geral", exact: true },
   { href: "/minha-conta/reservas", label: "Minhas reservas" },
   { href: "/minha-conta/historico", label: "Histórico" },
+  { href: "/minha-conta/perfil", label: "Perfil" },
 ] as const;
 
 /** Quantidade de obras por página no acervo público. */

@@ -15,7 +15,7 @@ import { storageStateFor } from "./accounts";
  * Android grande), o tablet e as três faixas de desktop.
  */
 
-const LARGURAS = [375, 390, 430, 768, 1024, 1280, 1440] as const;
+const LARGURAS = [375, 390, 430, 768, 1024, 1280, 1440, 1920] as const;
 
 /** Rotas abertas, sem sessão. */
 const ROTAS_PUBLICAS = [
@@ -23,9 +23,13 @@ const ROTAS_PUBLICAS = [
   "/acervo",
   "/acervo?q=africa",
   "/acervo?q=zzzzsemresultado",
+  "/acervo?category=educacao&availability=fisico",
   "/sobre",
   "/contato",
+  "/acessibilidade",
+  "/privacidade",
   "/login",
+  "/login?callbackUrl=/acervo/negra-soul/reservar",
   "/rota-que-nao-existe",
 ] as const;
 
@@ -34,6 +38,8 @@ const ROTAS_CONTA = [
   "/minha-conta",
   "/minha-conta/reservas",
   "/minha-conta/historico",
+  "/minha-conta/perfil",
+  "/acervo/a-africa-explicada-aos-meus-filhos/reservar",
 ] as const;
 
 /** Rotas do painel administrativo. */

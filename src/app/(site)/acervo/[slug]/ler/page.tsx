@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Container, NeabiRule } from "@/components/layout/primitives";
 import { DigitalReader } from "@/components/books/digital-reader";
+import { Breadcrumbs, Container, Eyebrow, NeabiRule } from "@/components/layout/primitives";
 import { AssetKind } from "@/generated/prisma/enums";
 import { resolveAssetUrl } from "@/lib/asset-url";
 import { findBookBySlug } from "@/server/repositories/book-repository";
@@ -37,40 +36,47 @@ export default async function ReaderPage({ params }: { params: Params }) {
   if (!source) notFound();
 
   return (
-    <Container className="py-10 sm:py-12">
-      <nav aria-label="Trilha de navegação" className="mb-6">
-        <Link
-          href={`/acervo/${book.slug}`}
-          className="text-[0.875rem] text-ink-500 underline underline-offset-4 hover:text-ink-900"
-        >
-          ← Voltar para a obra
-        </Link>
-      </nav>
-
-      <header>
-        <h1 className="text-balance font-display text-[clamp(1.75rem,4vw,2.75rem)] font-bold leading-tight text-ink-900">
-          {book.title}
-        </h1>
-        {book.subtitle ? (
-          <p className="mt-2 text-[1.0625rem] text-ink-600">{book.subtitle}</p>
-        ) : null}
-        <NeabiRule className="mt-5" />
-      </header>
-
-      <div className="mt-8">
-        <DigitalReader
-          source={source}
-          fileName={asset.fileName}
-          downloadAllowed={asset.downloadAllowed}
-          title={book.title}
-        />
+    <>
+      <div className="border-b border-border bg-surface-muted">
+        <Container className="py-3.5">
+          <Breadcrumbs
+            items={[
+              { href: "/", label: "Início" },
+              { href: "/acervo", label: "Acervo" },
+              { href: `/acervo/${book.slug}`, label: book.title },
+              { label: "Consulta digital" },
+            ]}
+          />
+        </Container>
       </div>
 
-      <p className="mt-6 max-w-prose text-[0.8125rem] leading-relaxed text-ink-500">
-        Material disponibilizado com autorização registrada pelo NEABI. A
-        reprodução e a redistribuição seguem as condições da obra e do
-        detentor dos direitos.
-      </p>
-    </Container>
+      <Container className="pb-16 pt-8 sm:pt-10">
+        <header className="max-w-3xl">
+          <Eyebrow>Consulta digital</Eyebrow>
+          <h1 className="mt-3 text-balance font-display text-display-sm font-bold text-ink-900">
+            {book.title}
+          </h1>
+          {book.subtitle ? (
+            <p className="mt-2 text-pretty text-lede text-ink-600">{book.subtitle}</p>
+          ) : null}
+          <NeabiRule className="mt-5" />
+        </header>
+
+        <div className="mt-8">
+          <DigitalReader
+            source={source}
+            fileName={asset.fileName}
+            downloadAllowed={asset.downloadAllowed}
+            title={book.title}
+          />
+        </div>
+
+        <p className="mt-6 max-w-prose text-[0.8125rem] leading-relaxed text-ink-500">
+          Material disponibilizado com autorização registrada pelo NEABI. A
+          reprodução e a redistribuição seguem as condições da obra e do
+          detentor dos direitos.
+        </p>
+      </Container>
+    </>
   );
 }

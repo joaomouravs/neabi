@@ -5,7 +5,7 @@ import { AdminShell } from "@/components/admin/admin-shell";
 import { roleLabels } from "@/config/catalog";
 import { prisma } from "@/lib/prisma";
 import { getActor } from "@/server/auth/session";
-import { canAccessAdmin } from "@/server/permissions/rbac";
+import { can, canAccessAdmin } from "@/server/permissions/rbac";
 
 export const metadata = {
   title: "Painel administrativo",
@@ -24,14 +24,18 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   if (!actor) redirect("/login?callbackUrl=%2Fadmin");
   if (!canAccessAdmin(actor)) forbidden();
 
-  const user = await prisma.user.findUnique({
-    where: { id: actor.id },
-    select: { name: true },
-  });
+  // O contador de pendências só é consultado para quem pode ver reservas.
+  const [user, pendingReservations] = await Promise.all([
+    prisma.user.findUnique({ where: { id: actor.id }, select: { name: true } }),
+    can(actor, "reservation:read:any")
+      ? prisma.reservation.count({ where: { status: "PENDING" } })
+      : Promise.resolve(0),
+  ]);
 
   return (
     <AdminShell
       user={{ name: user?.name ?? null, roleLabel: roleLabels[actor.role] }}
+      pendingReservations={pendingReservations}
     >
       {children}
     </AdminShell>

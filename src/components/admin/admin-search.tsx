@@ -1,5 +1,6 @@
 "use client";
 
+import { Search } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
@@ -42,17 +43,21 @@ export function AdminSearch({
 
   return (
     <form onSubmit={handleSubmit} role="search" className="flex gap-2">
-      <label className="flex-1">
+      <label className="relative min-w-0 flex-1">
         <span className="sr-only">{placeholder}</span>
+        <Search
+          aria-hidden="true"
+          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-500"
+        />
         <input
           type="search"
           value={value}
           onChange={(event) => setValue(event.target.value)}
           placeholder={placeholder}
-          className="min-h-10 w-full border border-ink-900/20 bg-white px-3 text-[0.875rem] text-ink-900 placeholder:text-ink-400 focus:border-ink-900 focus:outline-none"
+          className="min-h-11 w-full border border-ink-900/20 bg-white pl-9 pr-3 text-base text-ink-900 transition-colors placeholder:text-ink-500 hover:border-ink-900/40 focus:border-ink-900 focus-visible:outline-2 sm:text-[0.875rem]"
         />
       </label>
-      <Button type="submit" variant="outline" size="sm">
+      <Button type="submit" variant="outline" className="shrink-0">
         Buscar
       </Button>
     </form>

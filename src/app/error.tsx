@@ -30,7 +30,7 @@ export default function ErrorBoundary({
       description="Não conseguimos concluir esta operação. Tente novamente em alguns instantes; se o problema continuar, avise a equipe do NEABI."
       reference={error.digest}
     >
-      <Button size="lg" onClick={reset}>
+      <Button variant="onDark" size="lg" onClick={reset}>
         Tentar novamente
       </Button>
       <Button asChild variant="onDarkOutline" size="lg">

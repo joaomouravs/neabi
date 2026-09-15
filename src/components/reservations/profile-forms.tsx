@@ -1,5 +1,6 @@
 "use client";
 
+import { LogOut } from "lucide-react";
 import { useActionState } from "react";
 
 import {
@@ -8,8 +9,9 @@ import {
   updateProfileAction,
 } from "@/features/auth/actions";
 import { Button } from "@/components/ui/button";
-import { Field, FieldLabel, Input, Select } from "@/components/ui/field";
+import { Field, FieldLabel, Input, PasswordInput, Select } from "@/components/ui/field";
 import { Alert } from "@/components/ui/feedback";
+import { useFormValidation } from "@/components/ui/use-form-validation";
 import { patronTypeLabels } from "@/config/catalog";
 import { PatronType } from "@/generated/prisma/enums";
 import type { ActionResult } from "@/server/errors";
@@ -27,21 +29,31 @@ export function ProfileForm({
     patronType: PatronType | null;
   };
 }) {
-  const [state, action, pending] = useActionState<State, FormData>(
-    updateProfileAction,
-    null,
-  );
+  const [state, action, pending] = useActionState<State, FormData>(updateProfileAction, null);
+  const validation = useFormValidation({
+    name: (value) => (value.trim() ? null : "Informe o nome completo."),
+    phone: (value) => {
+      if (!value.trim()) return null;
+      const digits = value.replace(/\D/g, "").length;
+      return digits >= 10 && digits <= 13 ? null : "Informe um telefone válido com DDD.";
+    },
+  });
 
   return (
-    <form action={action} className="flex flex-col gap-5">
+    <form action={action} noValidate onSubmit={validation.handleSubmit} className="flex flex-col gap-5">
       {state?.ok ? <Alert variant="success">Perfil atualizado.</Alert> : null}
-      {state && !state.ok && !state.field ? (
-        <Alert variant="danger">{state.error}</Alert>
-      ) : null}
+      {state && !state.ok && !state.field ? <Alert variant="danger">{state.error}</Alert> : null}
 
-      <Field error={fieldError(state, "name")}>
+      <Field error={validation.errorFor("name", fieldError(state, "name"))}>
         <FieldLabel required>Nome completo</FieldLabel>
-        <Input name="name" defaultValue={defaults.name} required maxLength={160} />
+        <Input
+          name="name"
+          autoComplete="name"
+          defaultValue={defaults.name}
+          required
+          maxLength={160}
+          {...validation.fieldProps("name")}
+        />
       </Field>
 
       <Field description="O e-mail de acesso não pode ser alterado por aqui. Fale com a equipe do NEABI se precisar trocá-lo.">
@@ -50,13 +62,17 @@ export function ProfileForm({
       </Field>
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field error={fieldError(state, "phone")}>
+        <Field error={validation.errorFor("phone", fieldError(state, "phone"))}>
           <FieldLabel>Telefone</FieldLabel>
           <Input
             name="phone"
             type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="(21) 90000-0000"
             defaultValue={defaults.phone}
             maxLength={40}
+            {...validation.fieldProps("phone")}
           />
         </Field>
 
@@ -75,15 +91,11 @@ export function ProfileForm({
 
       <Field error={fieldError(state, "registrationId")}>
         <FieldLabel>Matrícula ou vínculo institucional</FieldLabel>
-        <Input
-          name="registrationId"
-          defaultValue={defaults.registrationId}
-          maxLength={60}
-        />
+        <Input name="registrationId" defaultValue={defaults.registrationId} maxLength={60} />
       </Field>
 
       <div>
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" loading={pending}>
           {pending ? "Salvando…" : "Salvar alterações"}
         </Button>
       </div>
@@ -92,56 +104,62 @@ export function ProfileForm({
 }
 
 export function ChangePasswordForm() {
-  const [state, action, pending] = useActionState<State, FormData>(
-    changePasswordAction,
-    null,
-  );
+  const [state, action, pending] = useActionState<State, FormData>(changePasswordAction, null);
+  const validation = useFormValidation({
+    currentPassword: (value) => (value ? null : "Informe a senha atual."),
+    password: (value) =>
+      value.length >= 10 ? null : "A senha deve ter pelo menos 10 caracteres.",
+    passwordConfirmation: (value, form) => {
+      const password = (form.elements.namedItem("password") as HTMLInputElement | null)?.value;
+      return value === password ? null : "As senhas não coincidem.";
+    },
+  });
 
   return (
-    <form action={action} className="flex flex-col gap-5">
+    <form action={action} noValidate onSubmit={validation.handleSubmit} className="flex flex-col gap-5">
       {state?.ok ? <Alert variant="success">Senha alterada.</Alert> : null}
-      {state && !state.ok && !state.field ? (
-        <Alert variant="danger">{state.error}</Alert>
-      ) : null}
+      {state && !state.ok && !state.field ? <Alert variant="danger">{state.error}</Alert> : null}
 
-      <Field error={fieldError(state, "currentPassword")}>
+      <Field error={validation.errorFor("currentPassword", fieldError(state, "currentPassword"))}>
         <FieldLabel required>Senha atual</FieldLabel>
-        <Input
+        <PasswordInput
           name="currentPassword"
-          type="password"
           autoComplete="current-password"
           required
+          {...validation.fieldProps("currentPassword")}
         />
       </Field>
 
       <div className="grid gap-5 sm:grid-cols-2">
         <Field
-          error={fieldError(state, "password")}
+          error={validation.errorFor("password", fieldError(state, "password"))}
           description="Pelo menos 10 caracteres."
         >
           <FieldLabel required>Nova senha</FieldLabel>
-          <Input
+          <PasswordInput
             name="password"
-            type="password"
             autoComplete="new-password"
             required
             minLength={10}
+            {...validation.fieldProps("password")}
           />
         </Field>
 
-        <Field error={fieldError(state, "passwordConfirmation")}>
+        <Field
+          error={validation.errorFor("passwordConfirmation", fieldError(state, "passwordConfirmation"))}
+        >
           <FieldLabel required>Confirmar nova senha</FieldLabel>
-          <Input
+          <PasswordInput
             name="passwordConfirmation"
-            type="password"
             autoComplete="new-password"
             required
+            {...validation.fieldProps("passwordConfirmation")}
           />
         </Field>
       </div>
 
       <div>
-        <Button type="submit" variant="outline" disabled={pending}>
+        <Button type="submit" variant="outline" loading={pending}>
           {pending ? "Alterando…" : "Alterar senha"}
         </Button>
       </div>
@@ -152,7 +170,8 @@ export function ChangePasswordForm() {
 export function LogoutButton() {
   return (
     <form action={logoutAction}>
-      <Button type="submit" variant="ghost">
+      <Button type="submit" variant="ghost" className="-ml-3">
+        <LogOut aria-hidden="true" />
         Sair da conta
       </Button>
     </form>
