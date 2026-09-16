@@ -14,7 +14,7 @@ import { composeSearchText } from "@/server/services/search-text";
 import { SEED_BOOKS, SEED_CATEGORIES, type SeedBook } from "./acervo-inicial";
 
 /**
- * Seed da Biblioteca NEABI.
+ * Seed da Biblioteca NEABI-NI.
  *
  * Idempotente: rodar duas vezes não duplica nada. Todas as escritas usam
  * `upsert` com chaves naturais (slug, e-mail, código do exemplar).
@@ -68,7 +68,7 @@ async function seedSettings(): Promise<void> {
    * linhas vazias em vez de exibir um dado falso.
    */
   const base = {
-    libraryName: "Biblioteca NEABI",
+    libraryName: "Biblioteca NEABI-NI",
     institution: "CEFET/RJ",
     campus: "Campus Nova Iguaçu",
     serviceDays: [1, 2, 3, 4, 5],
@@ -356,7 +356,7 @@ function reportUnmatchedCovers(): void {
 // ---------------------------------------------------------------------------
 
 async function main(): Promise<void> {
-  console.info("Semeando a Biblioteca NEABI…\n");
+  console.info("Semeando a Biblioteca NEABI-NI…\n");
 
   await seedSettings();
   console.info("  ✓ configurações institucionais");

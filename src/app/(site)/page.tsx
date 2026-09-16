@@ -94,11 +94,20 @@ function Hero() {
         <div className="min-w-0 max-w-2xl">
           <Eyebrow tone="dark">Núcleo de Estudos Afro-Brasileiros e Indígenas</Eyebrow>
 
+          {/*
+            A quebra é explícita, não negociada com o navegador: o hífen de
+            "NEABI-NI" é um ponto de quebra legítimo em CSS e deixaria "NI"
+            sozinho numa linha. Em dois spans de bloco o lockup é sempre o
+            mesmo — "Biblioteca" sobre "NEABI-NI" — e o nome acessível
+            continua sendo a frase inteira.
+          */}
           <h1
             id="hero-titulo"
-            className="mt-6 text-balance font-display text-display-xl font-bold text-neabi-cream"
+            className="mt-6 font-display text-display-xl font-bold text-neabi-cream"
           >
-            Biblioteca NEABI
+            <span className="block">Biblioteca</span>{" "}
+            {/* Caixa-alta condensada pede um pouco mais de ar que o texto misto. */}
+            <span className="block tracking-[-0.005em]">NEABI-NI</span>
           </h1>
 
           <NeabiRule className="mt-7 w-28" />
@@ -159,7 +168,10 @@ async function HeroStats() {
   ];
 
   return (
-    <dl className="mt-10 grid grid-cols-[auto_auto_1fr] gap-x-6 gap-y-3 border-t border-neabi-cream/15 pt-5 sm:max-w-xl sm:gap-x-10">
+    // "Presencial" é a única célula com uma palavra inteira e não tem onde
+    // quebrar: a 375px ela vazava alguns pixels da margem. Colunas um pouco
+    // mais justas no celular resolvem sem mexer na escala dos números.
+    <dl className="mt-10 grid grid-cols-[auto_auto_1fr] gap-x-5 gap-y-3 border-t border-neabi-cream/15 pt-5 sm:max-w-xl sm:gap-x-10">
       {items.map((item) => (
         <div key={item.label} className="flex min-w-0 flex-col-reverse gap-1">
           <dt className="text-[0.75rem] leading-snug text-neabi-cream/65 sm:text-[0.8125rem]">

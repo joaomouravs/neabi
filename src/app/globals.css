@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ==========================================================================
-   Biblioteca NEABI — design tokens
+   Biblioteca NEABI-NI — design tokens
    Identidade visual do Núcleo de Estudos Afro-Brasileiros e Indígenas.
    As cinco cores institucionais são invariantes; os tons auxiliares são
    derivados delas e existem apenas para estados, superfícies e contraste.
@@ -325,10 +325,15 @@
      Escala tipográfica fluida. Os limites inferiores foram medidos contra
      os títulos reais mais longos do acervo em 375px.
      ------------------------------------------------------------------------ */
+  /* Passo exclusivo da manchete da home, que é um lockup de duas linhas (a
+     quebra vem do JSX). O piso sustenta a presença da marca no celular sem
+     que "Biblioteca" precise quebrar; o teto dá o peso da dobra no desktop.
+     Entrelinha abaixo de 1 fecha as duas linhas em um bloco só, e a marcha
+     negativa compensa o corpo grande da Barlow Condensed. */
   .text-display-xl {
-    font-size: clamp(3rem, 8.4vw, 6.5rem);
-    line-height: 0.9;
-    letter-spacing: -0.015em;
+    font-size: clamp(3.25rem, 8.6vw, 7rem);
+    line-height: 0.88;
+    letter-spacing: -0.02em;
   }
 
   .text-display-lg {

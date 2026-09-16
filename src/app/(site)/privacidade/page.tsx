@@ -5,7 +5,7 @@ import { LegalPage } from "@/components/layout/legal-page";
 
 export const metadata: Metadata = {
   title: "Privacidade",
-  description: "Quais dados a Biblioteca NEABI registra, por que e como solicitar alterações.",
+  description: "Quais dados a Biblioteca NEABI-NI registra, por que e como solicitar alterações.",
   alternates: { canonical: "/privacidade" },
 };
 
@@ -19,7 +19,7 @@ export default function PrivacyPage() {
     <LegalPage
       eyebrow="Transparência"
       title="Privacidade"
-      description="O que a Biblioteca NEABI registra quando você consulta o acervo, cria uma conta ou solicita uma reserva — e para quê."
+      description="O que a Biblioteca NEABI-NI registra quando você consulta o acervo, cria uma conta ou solicita uma reserva — e para quê."
       updated="setembro de 2026"
       sections={[
         {

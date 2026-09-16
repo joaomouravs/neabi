@@ -57,7 +57,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
     <div className="grid min-h-dvh lg:grid-cols-[minmax(0,1fr)_minmax(0,0.92fr)]">
       <main id="conteudo" className="flex min-w-0 flex-col px-5 pb-8 pt-5 sm:px-10 lg:px-14 xl:px-20">
         <div className="flex items-center justify-between gap-4">
-          <Link href="/" aria-label="Biblioteca NEABI — página inicial">
+          <Link href="/" aria-label="Biblioteca NEABI-NI — página inicial">
             <NeabiMark />
           </Link>
           <Link
@@ -112,7 +112,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
       </main>
 
       <aside
-        aria-label="Sobre a Biblioteca NEABI"
+        aria-label="Sobre a Biblioteca NEABI-NI"
         className="on-dark relative hidden overflow-hidden bg-neabi-black text-neabi-cream lg:block"
       >
         <div aria-hidden="true" className="neabi-rule absolute inset-x-0 top-0 h-1.5" />

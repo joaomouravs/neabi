@@ -8,7 +8,7 @@ import { siteConfig } from "@/config/site";
 import "./globals.css";
 
 /**
- * Tipografia da Biblioteca NEABI.
+ * Tipografia da Biblioteca NEABI-NI.
  *
  * Barlow Condensed nos títulos dá voz editorial e permite manchetes grandes sem
  * consumir a largura da linha. DM Sans cuida de leitura e interface. Ambas são

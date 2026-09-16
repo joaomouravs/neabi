@@ -5,7 +5,7 @@ import { LegalPage } from "@/components/layout/legal-page";
 
 export const metadata: Metadata = {
   title: "Acessibilidade",
-  description: "Compromisso e recursos de acessibilidade da Biblioteca NEABI.",
+  description: "Compromisso e recursos de acessibilidade da Biblioteca NEABI-NI.",
   alternates: { canonical: "/acessibilidade" },
 };
 
@@ -14,7 +14,7 @@ export default function AccessibilityPage() {
     <LegalPage
       eyebrow="Compromisso"
       title="Acessibilidade"
-      description="Um acervo sobre acesso ao conhecimento precisa ser acessível. Esta página descreve o que a Biblioteca NEABI oferece hoje e o que ainda tem limitações."
+      description="Um acervo sobre acesso ao conhecimento precisa ser acessível. Esta página descreve o que a Biblioteca NEABI-NI oferece hoje e o que ainda tem limitações."
       updated="setembro de 2026"
       sections={[
         {

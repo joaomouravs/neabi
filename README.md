@@ -1,4 +1,4 @@
-# Biblioteca NEABI
+# Biblioteca NEABI-NI
 
 Plataforma de acervo do **Núcleo de Estudos Afro-Brasileiros e Indígenas (NEABI)
 — CEFET/RJ, campus Nova Iguaçu**.
@@ -35,7 +35,7 @@ armazenamento de arquivos.
 
 ## Sobre
 
-A Biblioteca NEABI organiza e dá acesso ao acervo do núcleo. Qualquer pessoa
+A Biblioteca NEABI-NI organiza e dá acesso ao acervo do núcleo. Qualquer pessoa
 pode navegar, pesquisar e consultar a ficha de uma obra sem cadastro. Para
 solicitar a consulta presencial de um exemplar, é preciso entrar em uma conta.
 A equipe do NEABI cataloga, controla exemplares e conduz o atendimento pelo

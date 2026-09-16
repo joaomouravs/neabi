@@ -69,7 +69,7 @@ export function SiteFooter({
       <Container className="relative pb-8 pt-14 sm:pt-16">
         <div className="grid gap-x-8 gap-y-11 sm:grid-cols-2 lg:grid-cols-12">
           <div className="sm:col-span-2 lg:col-span-4">
-            <Link href="/" aria-label="Biblioteca NEABI — página inicial" className="inline-block">
+            <Link href="/" aria-label="Biblioteca NEABI-NI — página inicial" className="inline-block">
               <NeabiMark tone="dark" />
             </Link>
             <p className="mt-5 max-w-sm text-pretty text-[0.9375rem] leading-relaxed text-neabi-cream/70">

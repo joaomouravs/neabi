@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Marca da Biblioteca NEABI.
+ * Marca da Biblioteca NEABI-NI.
  *
  * Composição tipográfica com as três cores institucionais — não é o logotipo
  * oficial do núcleo. Quando o NEABI fornecer o arquivo vetorial da marca, basta
@@ -42,7 +42,7 @@ export function NeabiMark({
             dark ? "text-neabi-cream" : "text-ink-900",
           )}
         >
-          Biblioteca NEABI
+          Biblioteca NEABI-NI
         </span>
         {showSubtitle ? (
           <span

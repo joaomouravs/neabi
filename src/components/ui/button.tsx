@@ -6,7 +6,7 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Botão da Biblioteca NEABI.
+ * Botão da Biblioteca NEABI-NI.
  *
  * Formas sóbrias, cantos praticamente retos e peso tipográfico — a linguagem é
  * editorial, não de painel administrativo comprado. As variantes principais

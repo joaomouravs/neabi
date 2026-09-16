@@ -1,4 +1,4 @@
-// Biblioteca NEABI — modelagem de dados
+// Biblioteca NEABI-NI — modelagem de dados
 // NEABI — Núcleo de Estudos Afro-Brasileiros e Indígenas — CEFET/RJ, campus Nova Iguaçu
 //
 // Princípios:
@@ -513,7 +513,7 @@ model SearchEvent {
 model Settings {
   id String @id @default("default")
 
-  libraryName String @default("Biblioteca NEABI")
+  libraryName String @default("Biblioteca NEABI-NI")
   institution String @default("CEFET/RJ")
   campus      String @default("Campus Nova Iguaçu")
   email       String @default("")

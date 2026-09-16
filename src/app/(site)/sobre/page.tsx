@@ -16,7 +16,7 @@ import { getSettings } from "@/server/repositories/settings-repository";
 export const metadata: Metadata = {
   title: "Sobre",
   description:
-    "O Núcleo de Estudos Afro-Brasileiros e Indígenas do CEFET/RJ, campus Nova Iguaçu: ensino, pesquisa, extensão e a Biblioteca NEABI.",
+    "O Núcleo de Estudos Afro-Brasileiros e Indígenas do CEFET/RJ, campus Nova Iguaçu: ensino, pesquisa, extensão e a Biblioteca NEABI-NI.",
   alternates: { canonical: "/sobre" },
 };
 
@@ -130,7 +130,7 @@ export default async function AboutPage() {
 
             <div className="space-y-5 text-pretty text-lede text-ink-800">
               <p>
-                A Biblioteca NEABI organiza esse acervo e o torna acessível.
+                A Biblioteca NEABI-NI organiza esse acervo e o torna acessível.
                 Publicações acadêmicas, cadernos de pesquisa, cartilhas, inventários
                 de patrimônio, planos nacionais e obras de referência convivem no
                 mesmo catálogo, porque juntos compõem o registro de um campo de

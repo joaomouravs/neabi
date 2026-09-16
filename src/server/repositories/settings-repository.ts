@@ -17,7 +17,7 @@ export type SettingsWriteInput = Omit<
  * existe, o painel administrativo é a única fonte de verdade.
  */
 const FALLBACK_WRITE: SettingsWriteInput = {
-  libraryName: "Biblioteca NEABI",
+  libraryName: "Biblioteca NEABI-NI",
   institution: "CEFET/RJ",
   campus: "Campus Nova Iguaçu",
   email: "",

@@ -31,7 +31,7 @@ export function ShareButton({ title, path }: { title: string; path: string }) {
 
     if (typeof navigator.share === "function") {
       try {
-        await navigator.share({ title: `${title} — Biblioteca NEABI`, url });
+        await navigator.share({ title: `${title} — Biblioteca NEABI-NI`, url });
         return;
       } catch (error) {
         // Fechar a folha de compartilhamento não é erro.

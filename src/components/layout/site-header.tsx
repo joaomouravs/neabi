@@ -138,7 +138,7 @@ export function SiteHeader({ user }: { user: HeaderUser | null }) {
         <Link
           href="/"
           className="justify-self-start"
-          aria-label="Biblioteca NEABI — página inicial"
+          aria-label="Biblioteca NEABI-NI — página inicial"
         >
           <NeabiMark size={compact ? "sm" : "md"} />
         </Link>
@@ -419,7 +419,7 @@ function MobileMenu({
         className="neabi-pattern pointer-events-none absolute inset-0 text-neabi-cream opacity-[0.04]"
       />
       <Container className="relative flex h-[var(--header-height)] shrink-0 items-center justify-between">
-        <Link href="/" onClick={onClose} aria-label="Biblioteca NEABI — página inicial">
+        <Link href="/" onClick={onClose} aria-label="Biblioteca NEABI-NI — página inicial">
           <NeabiMark tone="dark" />
         </Link>
         <Dialog.Close asChild>

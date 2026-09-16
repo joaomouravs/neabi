@@ -7,7 +7,7 @@
  */
 
 export const siteConfig = {
-  name: "Biblioteca NEABI",
+  name: "Biblioteca NEABI-NI",
   shortName: "NEABI",
   description:
     "Acervo de estudos afro-brasileiros e indígenas do NEABI — CEFET/RJ, campus Nova Iguaçu.",

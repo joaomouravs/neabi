@@ -83,7 +83,7 @@ const baseSchema = z.object({
   MAIL_FROM: z
     .string()
     .trim()
-    .default("Biblioteca NEABI <nao-responda@localhost>"),
+    .default("Biblioteca NEABI-NI <nao-responda@localhost>"),
   SMTP_HOST: z.string().trim().optional(),
   SMTP_PORT: z.coerce.number().int().positive().optional(),
   SMTP_USER: z.string().trim().optional(),

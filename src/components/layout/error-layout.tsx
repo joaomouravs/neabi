@@ -43,7 +43,7 @@ export function ErrorLayout({
       </p>
 
       <Container className="relative flex h-[var(--header-height)] items-center">
-        <Link href="/" aria-label="Biblioteca NEABI — página inicial">
+        <Link href="/" aria-label="Biblioteca NEABI-NI — página inicial">
           <NeabiMark tone="dark" />
         </Link>
       </Container>

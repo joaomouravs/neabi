@@ -1,4 +1,4 @@
--- Índices opcionais de busca — Biblioteca NEABI
+-- Índices opcionais de busca — Biblioteca NEABI-NI
 --
 -- A busca do catálogo funciona sem estes índices: `Book.searchText` guarda o
 -- texto já normalizado (minúsculas, sem acentos) e a consulta usa LIKE.

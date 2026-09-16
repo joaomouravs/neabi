@@ -19,7 +19,7 @@ export async function register(): Promise<void> {
 
   const config = env();
 
-  logger.info("Biblioteca NEABI iniciada", {
+  logger.info("Biblioteca NEABI-NI iniciada", {
     ambiente: config.NODE_ENV,
     armazenamento: config.STORAGE_DRIVER,
     email: config.MAIL_DRIVER,

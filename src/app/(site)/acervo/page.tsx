@@ -97,7 +97,7 @@ async function CatalogHeader() {
 
   return (
     <PageHeader
-      eyebrow="Biblioteca NEABI"
+      eyebrow="Biblioteca NEABI-NI"
       title="Acervo"
       breadcrumbs={[{ href: "/", label: "Início" }, { label: "Acervo" }]}
       description="Obras de estudos afro-brasileiros e indígenas para consulta presencial. A busca alcança título, autoria, organização, editora, eixo, assunto e ISBN — e ignora acentos."

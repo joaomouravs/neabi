@@ -14,7 +14,7 @@ test.describe("catálogo público", () => {
     await page.goto("/");
 
     await expect(
-      page.getByRole("heading", { level: 1, name: "Biblioteca NEABI" }),
+      page.getByRole("heading", { level: 1, name: "Biblioteca NEABI-NI" }),
     ).toBeVisible();
     await expect(
       page
