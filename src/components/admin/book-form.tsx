@@ -461,7 +461,11 @@ function ContributorEditor({
   }
 
   return (
-    <fieldset className="border border-border p-4">
+    // `min-w-0`: o navegador dá a todo `fieldset` um `min-width: min-content`
+    // que nenhum contêiner flex ou grid consegue comprimir. Com um nome longo
+    // na lista, a ficha ficava mais larga que a coluna e a página inteira
+    // ganhava rolagem horizontal no celular.
+    <fieldset className="min-w-0 border border-border p-4">
       <legend className="px-1.5 font-sans text-[0.8125rem] font-semibold text-ink-800">
         Autoria, organização e colaboração
       </legend>
@@ -476,7 +480,12 @@ function ContributorEditor({
               <span className="min-w-0 flex-1 truncate text-[0.875rem] text-ink-800">
                 {contributor.name}
               </span>
-              <span className="shrink-0 text-[0.75rem] uppercase tracking-[0.06em] text-ink-500">
+              {/*
+                O papel some no celular: com os três botões de ordenação ao
+                lado, ele só caberia roubando o espaço do nome, que é o dado
+                que a pessoa precisa ler para saber qual linha está movendo.
+              */}
+              <span className="hidden shrink-0 text-[0.75rem] uppercase tracking-[0.06em] text-ink-500 min-[420px]:inline">
                 {contributorRoleLabels[contributor.role]}
               </span>
               <div className="flex shrink-0 gap-1">
