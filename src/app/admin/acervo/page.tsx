@@ -10,6 +10,7 @@ import {
   adminLinkClass,
 } from "@/components/admin/admin-ui";
 import { AdminSearch } from "@/components/admin/admin-search";
+import { BookCover } from "@/components/books/book-cover";
 import { Pagination } from "@/components/catalog/pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,10 @@ export default async function AdminBooksPage({
   const status = single("status");
   const cataloging = single("cataloging");
   const page = Math.max(1, Number(single("page") ?? 1) || 1);
+  // A listagem acompanha o catálogo público: A→Z por padrão, porque procurar
+  // uma obra pelo título é o que mais se faz aqui. Quem está catalogando pode
+  // trocar para a ordem de edição com um clique.
+  const recentFirst = single("ordem") === "recentes";
 
   const where = {
     ...(status && Object.values(BookStatus).includes(status as BookStatus)
@@ -72,6 +77,8 @@ export default async function AdminBooksPage({
         catalogingStatus: true,
         year: true,
         updatedAt: true,
+        coverImage: true,
+        coverAlt: true,
         _count: { select: { copies: true, reservations: true } },
         copies: { where: { status: CopyStatus.AVAILABLE }, select: { id: true } },
         contributors: {
@@ -80,7 +87,9 @@ export default async function AdminBooksPage({
           take: 2,
         },
       },
-      orderBy: { updatedAt: "desc" },
+      orderBy: recentFirst
+        ? [{ updatedAt: "desc" }, { id: "asc" }]
+        : [{ sortTitle: "asc" }, { id: "asc" }],
       skip: (page - 1) * ADMIN_PAGE_SIZE,
       take: ADMIN_PAGE_SIZE,
     }),
@@ -91,7 +100,14 @@ export default async function AdminBooksPage({
 
   const buildHref = (overrides: Record<string, string | number | undefined>) => {
     const search = new URLSearchParams();
-    const merged = { q: term, status, cataloging, page, ...overrides };
+    const merged = {
+      q: term,
+      status,
+      cataloging,
+      ordem: recentFirst ? "recentes" : undefined,
+      page,
+      ...overrides,
+    };
     for (const [key, value] of Object.entries(merged)) {
       if (value === undefined || value === "" || value === null) continue;
       if (key === "page" && Number(value) === 1) continue;
@@ -144,6 +160,16 @@ export default async function AdminBooksPage({
             },
           ]}
         />
+
+        <p className="text-[0.8125rem] text-ink-600">
+          {recentFirst ? "Ordenadas pela última edição." : "Ordenadas de A a Z pelo título."}{" "}
+          <Link
+            href={buildHref({ ordem: recentFirst ? undefined : "recentes", page: 1 })}
+            className={adminLinkClass}
+          >
+            {recentFirst ? "Ordenar de A a Z" : "Ordenar pela última edição"}
+          </Link>
+        </p>
       </div>
 
       <div className="mt-6">
@@ -177,26 +203,51 @@ export default async function AdminBooksPage({
             {books.map((book) => (
               <tr key={book.id} className="transition-colors hover:bg-surface-muted">
                 <Td className="max-w-md">
-                  <Link
-                    href={`/admin/acervo/${book.id}`}
-                    className="font-medium text-ink-900 hover:text-neabi-red-700"
-                  >
-                    {book.title}
-                  </Link>
-                  <p className="mt-0.5 line-clamp-1 text-[0.8125rem] text-ink-500">
-                    {[
-                      book.subtitle,
-                      book.contributors.map((entry) => entry.person.name).join("; "),
-                      book.year,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                  {book.catalogingStatus === CatalogingStatus.NEEDS_REVIEW ? (
-                    <Badge variant="amber" size="sm" className="mt-1.5">
-                      Dados incompletos
-                    </Badge>
-                  ) : null}
+                  <div className="flex items-start gap-3">
+                    {/*
+                      Miniatura da capa: conferir a que obra pertence cada
+                      fotografia é trabalho de catalogação, e fazê-lo exige
+                      vê-la aqui, ao lado do título.
+                    */}
+                    <div className="w-10 shrink-0 sm:w-12">
+                      <BookCover
+                        title={book.title}
+                        coverImage={book.coverImage}
+                        coverAlt={book.coverAlt}
+                        sizes="48px"
+                        className="border border-border"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <Link
+                        href={`/admin/acervo/${book.id}`}
+                        className="font-medium text-ink-900 hover:text-neabi-red-700"
+                      >
+                        {book.title}
+                      </Link>
+                      <p className="mt-0.5 line-clamp-1 text-[0.8125rem] text-ink-500">
+                        {[
+                          book.subtitle,
+                          book.contributors.map((entry) => entry.person.name).join("; "),
+                          book.year,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                        {book.catalogingStatus === CatalogingStatus.NEEDS_REVIEW ? (
+                          <Badge variant="amber" size="sm">
+                            Dados incompletos
+                          </Badge>
+                        ) : null}
+                        {!book.coverImage ? (
+                          <Badge variant="outline" size="sm">
+                            Sem capa
+                          </Badge>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
                 </Td>
                 <Td className="whitespace-nowrap text-ink-600">
                   {materialTypeLabels[book.materialType]}

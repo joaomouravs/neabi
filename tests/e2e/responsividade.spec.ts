@@ -29,7 +29,7 @@ const ROTAS_PUBLICAS = [
   "/acessibilidade",
   "/privacidade",
   "/login",
-  "/login?callbackUrl=/acervo/negra-soul/reservar",
+  "/login?callbackUrl=/acervo/negra-sou/reservar",
   "/rota-que-nao-existe",
 ] as const;
 

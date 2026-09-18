@@ -8,7 +8,7 @@ import bcrypt from "bcryptjs";
 
 import { materialTypeLabels } from "@/config/catalog";
 import { PrismaClient } from "@/generated/prisma/client";
-import { slugify } from "@/lib/text";
+import { slugify, sortableTitle } from "@/lib/text";
 import { composeSearchText } from "@/server/services/search-text";
 
 import { SEED_BOOKS, SEED_CATEGORIES, type SeedBook } from "./acervo-inicial";
@@ -55,6 +55,18 @@ function findCoverFor(slug: string): string | null {
     }
   }
   return null;
+}
+
+/**
+ * Texto alternativo padrão da fotografia de capa.
+ *
+ * Descreve o que a imagem é — a capa daquela obra, nomeada — em vez de
+ * "imagem", "foto" ou "capa", que nada dizem a quem usa leitor de tela. A
+ * equipe pode reescrevê-lo pelo painel; o seed nunca sobrescreve o que foi
+ * escrito lá.
+ */
+function coverAltFor(title: string): string {
+  return `Capa do livro ${title}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -240,15 +252,14 @@ async function seedBook(
       pages: null,
       language: null,
       coverImage,
-      coverAlt: coverImage
-        ? `Capa do exemplar de "${book.title}" no acervo do NEABI`
-        : null,
+      coverAlt: coverImage ? coverAltFor(book.title) : null,
       // Nenhum PDF autorizado foi cadastrado para o acervo inicial.
       digitalAvailable: false,
       status: "PUBLISHED",
       featured: book.featured ?? false,
       publishedAt: new Date(),
       searchText,
+      sortTitle: sortableTitle(book.title),
     },
     update: {
       title: book.title,
@@ -261,12 +272,22 @@ async function seedBook(
       materialType: book.materialType,
       featured: book.featured ?? false,
       searchText,
+      sortTitle: sortableTitle(book.title),
       // A capa é atualizada quando um arquivo passa a existir, mas nunca é
       // apagada: o admin pode ter enviado uma imagem melhor pelo painel.
       ...(coverImage ? { coverImage } : {}),
     },
-    select: { id: true },
+    select: { id: true, coverAlt: true },
   });
+
+  // O texto alternativo acompanha a capa que acabou de ser vinculada, mas nunca
+  // sobrescreve uma descrição escrita pela equipe no painel.
+  if (coverImage && !record.coverAlt) {
+    await prisma.book.update({
+      where: { id: record.id },
+      data: { coverAlt: coverAltFor(book.title) },
+    });
+  }
 
   // Colaboradores — substituição completa preservando a ordem da ficha.
   await prisma.bookContributor.deleteMany({ where: { bookId: record.id } });
@@ -321,19 +342,29 @@ async function seedBook(
    * informar — não são inventados aqui.
    */
   const code = `${book.slug.slice(0, 24).toUpperCase().replace(/-/g, "")}-001`;
-  await prisma.physicalCopy.upsert({
-    where: { code },
-    create: {
-      bookId: record.id,
-      code,
-      patrimonyCode: null,
-      location: null,
-      shelf: null,
-      condition: null,
-      status: "AVAILABLE",
-    },
-    update: {},
+
+  // A obra é a chave, não o código. O código deriva do slug, e um slug
+  // corrigido pela catalogação mudaria o código — o `upsert` por código então
+  // criaria um segundo exemplar para a mesma obra, inflando a disponibilidade
+  // com um volume que não existe na estante. Se a obra já tem exemplar, o seed
+  // não mexe: exemplares são cadastrados pelo painel a partir daqui.
+  const existing = await prisma.physicalCopy.findFirst({
+    where: { bookId: record.id },
+    select: { id: true },
   });
+  if (!existing) {
+    await prisma.physicalCopy.create({
+      data: {
+        bookId: record.id,
+        code,
+        patrimonyCode: null,
+        location: null,
+        shelf: null,
+        condition: null,
+        status: "AVAILABLE",
+      },
+    });
+  }
 }
 
 /** Avisa quando há fotografias na pasta que não correspondem a nenhuma obra. */
@@ -368,21 +399,31 @@ async function main(): Promise<void> {
   console.info(`  ✓ ${categoryIds.size} categorias`);
 
   let withCover = 0;
+  const missing: SeedBook[] = [];
   for (const book of SEED_BOOKS) {
     await seedBook(book, categoryIds);
     if (findCoverFor(book.slug)) withCover += 1;
+    else if (!book.coverIntentionallyAbsent) missing.push(book);
   }
   console.info(`  ✓ ${SEED_BOOKS.length} obras e ${SEED_BOOKS.length} exemplares físicos`);
   console.info(
     `  ✓ ${withCover} de ${SEED_BOOKS.length} obras com fotografia de capa vinculada`,
   );
 
-  if (withCover < SEED_BOOKS.length) {
-    console.info(
-      `\n  ${SEED_BOOKS.length - withCover} obra(s) ainda sem capa. Coloque as fotografias em`,
-    );
-    console.info("  public/acervo/capas/<slug-da-obra>.jpg e rode `npm run db:seed` de novo.");
-    console.info("  Consulte public/acervo/capas/README.md para a lista de slugs.");
+  // Ausência decidida pelo projeto não é pendência: dizê-lo aqui evita que a
+  // próxima pessoa "conserte" a falta com uma capa que não é daquela obra.
+  const intentional = SEED_BOOKS.filter(
+    (book) => book.coverIntentionallyAbsent && !findCoverFor(book.slug),
+  );
+  for (const book of intentional) {
+    console.info(`  ✓ "${book.title}" permanece sem capa por decisão do projeto`);
+  }
+
+  if (missing.length > 0) {
+    console.info(`\n  ${missing.length} obra(s) ainda sem capa:`);
+    for (const book of missing) console.info(`   - ${book.slug}`);
+    console.info("  Coloque as fotografias em public/acervo/capas/<slug-da-obra>.jpg");
+    console.info("  e rode `npm run db:seed` de novo. Ver public/acervo/capas/README.md.");
   }
 
   reportUnmatchedCovers();

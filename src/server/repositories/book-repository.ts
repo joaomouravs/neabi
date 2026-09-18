@@ -205,26 +205,43 @@ export function buildBookWhere(options: SearchBooksOptions): Prisma.BookWhereInp
   return conditions.length > 0 ? { AND: conditions } : {};
 }
 
+/**
+ * Ordenação alfabética do catálogo.
+ *
+ * Sempre por `sortTitle`, nunca por `title`: a ordenação de `title` depende da
+ * collation do banco, que difere entre a máquina de desenvolvimento e o
+ * provedor gerenciado — com a collation `C`, "África" cai depois de "Zumbi".
+ * `sortTitle` é o título já normalizado (ver `sortableTitle`), então a ordem é
+ * a mesma em qualquer ambiente. O `id` desempata para que a paginação não
+ * repita nem pule registros de título idêntico.
+ */
+const ALPHABETICAL: Prisma.BookOrderByWithRelationInput[] = [
+  { sortTitle: "asc" },
+  { id: "asc" },
+];
+
 function buildOrderBy(
   sort: CatalogSearchParams["sort"],
 ): Prisma.BookOrderByWithRelationInput[] {
   switch (sort) {
-    case "titulo-asc":
-      return [{ title: "asc" }];
     case "titulo-desc":
-      return [{ title: "desc" }];
+      return [{ sortTitle: "desc" }, { id: "asc" }];
     case "ano-desc":
-      return [{ year: { sort: "desc", nulls: "last" } }, { title: "asc" }];
+      return [{ year: { sort: "desc", nulls: "last" } }, ...ALPHABETICAL];
     case "ano-asc":
-      return [{ year: { sort: "asc", nulls: "last" } }, { title: "asc" }];
+      return [{ year: { sort: "asc", nulls: "last" } }, ...ALPHABETICAL];
     case "acessos":
-      return [{ viewCount: "desc" }, { title: "asc" }];
+      return [{ viewCount: "desc" }, ...ALPHABETICAL];
     case "recentes":
-    default:
       return [
         { publishedAt: { sort: "desc", nulls: "last" } },
         { createdAt: "desc" },
+        { id: "asc" },
       ];
+    // Navegação de catálogo — o padrão do acervo é A→Z pelo título.
+    case "titulo-asc":
+    default:
+      return ALPHABETICAL;
   }
 }
 
@@ -316,7 +333,7 @@ export async function findSearchSuggestions(
     prisma.book.findMany({
       where,
       select: bookCardSelect,
-      orderBy: [{ viewCount: "desc" }, { title: "asc" }],
+      orderBy: [{ viewCount: "desc" }, ...ALPHABETICAL],
       take: Math.max(limit * 6, 36),
     }),
     prisma.book.count({ where }),
@@ -339,7 +356,7 @@ export function findBooksMentioning(
   return prisma.book.findMany({
     where: buildBookWhere({ q: `"${term}"`, sort: "recentes", page: 1, perPage: limit }),
     select: bookCardSelect,
-    orderBy: [{ featured: "desc" }, { viewCount: "desc" }, { title: "asc" }],
+    orderBy: [{ featured: "desc" }, { viewCount: "desc" }, ...ALPHABETICAL],
     take: limit,
   });
 }
@@ -430,7 +447,7 @@ export function findRelatedBooks(
       categories: { some: { categoryId: { in: [...categoryIds] } } },
     },
     select: bookCardSelect,
-    orderBy: [{ viewCount: "desc" }, { createdAt: "desc" }],
+    orderBy: [{ viewCount: "desc" }, ...ALPHABETICAL],
     take: limit,
   });
 }

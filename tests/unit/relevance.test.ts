@@ -34,7 +34,7 @@ describe("relevância das sugestões", () => {
 
   it("considera a autoria quando o título não tem o termo", () => {
     const ranked = rankByRelevance(
-      [book("Negra Soul"), book("A África Explicada aos Meus Filhos", null, ["Alberto da Costa e Silva"])],
+      [book("Negra Sou!"), book("A África Explicada aos Meus Filhos", null, ["Alberto da Costa e Silva"])],
       "costa silva",
     );
     expect(ranked[0].title).toBe("A África Explicada aos Meus Filhos");

@@ -160,8 +160,13 @@ export default async function BookPage({ params }: { params: Params }) {
                   categoryName={primaryCategory?.name}
                   credit={credit}
                   priority
+                  // Aqui a capa é o assunto da página, não um elemento de
+                  // grade: mostramos a fotografia inteira, sem recorte. As
+                  // fotos têm proporções diferentes entre si, então sobra
+                  // respiro em volta — preferível a cortar a arte impressa.
+                  fit={book.coverImage ? "contain" : "cover"}
                   sizes="(min-width: 1280px) 264px, (min-width: 1024px) 240px, 240px"
-                  className="shadow-lift"
+                  className={cn("shadow-lift", book.coverImage && "border border-border")}
                 />
               </div>
               {!book.coverImage ? (

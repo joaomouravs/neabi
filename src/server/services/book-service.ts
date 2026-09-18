@@ -10,7 +10,7 @@ import {
 import { materialTypeLabels } from "@/config/catalog";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/server/logger";
-import { normalizeText, slugify } from "@/lib/text";
+import { normalizeText, slugify, sortableTitle } from "@/lib/text";
 import { ConflictError, NotFoundError, ValidationError } from "@/server/errors";
 import { slugExists } from "@/server/repositories/book-repository";
 import type { BookFormValues } from "@/validators/book";
@@ -117,10 +117,17 @@ export async function generateUniqueSlug(
 }
 
 // ---------------------------------------------------------------------------
-// Índice de busca
+// Campos derivados do texto da obra
 // ---------------------------------------------------------------------------
 
-/** Recalcula `searchText` a partir do estado atual da obra no banco. */
+/**
+ * Recalcula `searchText` e `sortTitle` a partir do estado atual da obra.
+ *
+ * Os dois são campos derivados: existem para que busca e ordenação sejam uma
+ * leitura de coluna indexada, sem JOINs e sem depender da collation do banco.
+ * Toda escrita que mude título, autoria ou taxonomia passa por aqui — nenhum
+ * dos dois deve ser preenchido à mão.
+ */
 export async function refreshSearchText(
   tx: Tx,
   bookId: string,
@@ -170,7 +177,10 @@ export async function refreshSearchText(
     tags: book.tags.map((entry) => entry.tag.name),
   });
 
-  await tx.book.update({ where: { id: bookId }, data: { searchText } });
+  await tx.book.update({
+    where: { id: bookId },
+    data: { searchText, sortTitle: sortableTitle(book.title) },
+  });
 }
 
 // ---------------------------------------------------------------------------

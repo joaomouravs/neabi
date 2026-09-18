@@ -10,6 +10,7 @@ import { Alert } from "@/components/ui/feedback";
 import {
   authorizeAssetAction,
   deleteAssetAction,
+  removeCoverAction,
   uploadCoverAction,
   uploadDocumentAction,
 } from "@/features/books/actions";
@@ -73,21 +74,41 @@ export function AssetsManager({
 
         <div className="mt-5 flex flex-wrap items-start gap-6">
           <div className="w-32 shrink-0">
+            {/*
+              Pré-visualização com o mesmo enquadramento da página da obra:
+              a fotografia inteira, sem recorte, para que a equipe confira o
+              que o público vai ver — inclusive se a capa é a da obra certa.
+            */}
             <BookCover
               title={bookTitle}
               coverImage={coverImage}
               sizes="128px"
+              fit={coverImage ? "contain" : "cover"}
+              className="border border-border"
             />
+            <p className="mt-2 text-center text-[0.75rem] text-ink-500">
+              {coverImage ? "Capa vinculada" : "Sem capa — ficha do sistema"}
+            </p>
           </div>
 
           <div className="min-w-64 flex-1">
             <UploadForm
               action={uploadCoverAction}
               bookId={bookId}
-              label="Enviar nova capa"
+              label={coverImage ? "Substituir capa" : "Adicionar capa"}
               accept="image/jpeg,image/png,image/webp,image/avif"
               hint="JPG, PNG, WebP ou AVIF, até 8 MB."
             />
+
+            {coverImage && canDelete ? (
+              <div className="mt-4 border-t border-border pt-4">
+                <RemoveCoverButton bookId={bookId} />
+                <p className="mt-2 max-w-prose text-[0.75rem] leading-relaxed text-ink-500">
+                  Desvincula somente a capa. Os dados da obra permanecem
+                  intactos e ela passa a aparecer com a ficha do sistema.
+                </p>
+              </div>
+            ) : null}
 
             {covers.length > 0 ? (
               <ul className="mt-5 flex flex-col divide-y divide-border border-t border-border">
@@ -273,6 +294,25 @@ function AuthorizeForm({ asset }: { asset: AssetRecord }) {
           {pending ? "Aplicando…" : "Aplicar autorização"}
         </Button>
       </div>
+    </form>
+  );
+}
+
+function RemoveCoverButton({ bookId }: { bookId: string }) {
+  const [state, action, pending] = useActionState<State, FormData>(
+    removeCoverAction,
+    null,
+  );
+
+  return (
+    <form action={action}>
+      <input type="hidden" name="bookId" value={bookId} />
+      {state && !state.ok ? (
+        <p className="mb-2 text-[0.75rem] text-neabi-red-700">{state.error}</p>
+      ) : null}
+      <Button type="submit" variant="outline" size="sm" disabled={pending}>
+        {pending ? "Removendo…" : "Remover capa"}
+      </Button>
     </form>
   );
 }

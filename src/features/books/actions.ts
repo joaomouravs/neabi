@@ -210,6 +210,17 @@ export async function deleteBookAction(
 // Arquivos
 // ---------------------------------------------------------------------------
 
+/**
+ * Texto alternativo padrão de uma capa recém-vinculada.
+ *
+ * Nomeia a obra em vez de dizer "imagem" ou "foto", que nada informam a quem
+ * usa leitor de tela. Serve de ponto de partida: a equipe reescreve o texto
+ * pelo formulário da obra quando a fotografia pede uma descrição mais precisa.
+ */
+function coverAltFor(title: string): string {
+  return `Capa do livro ${title}`;
+}
+
 export async function uploadCoverAction(
   _previous: unknown,
   formData: FormData,
@@ -256,10 +267,7 @@ export async function uploadCoverAction(
         where: { id: book.id },
         data: {
           coverImage: storage.getUrl(stored.key),
-          coverAlt:
-            book.coverImage === null
-              ? `Capa do exemplar de "${book.title}" no acervo do NEABI`
-              : undefined,
+          coverAlt: book.coverImage === null ? coverAltFor(book.title) : undefined,
         },
       });
     });
@@ -277,6 +285,78 @@ export async function uploadCoverAction(
     return actionOk({ key: stored.key });
   } catch (error) {
     audit("arquivo.falha", { operacao: "upload_capa", error });
+    return actionError(error);
+  }
+}
+
+/**
+ * Desvincula a capa da obra.
+ *
+ * Remove **apenas** a capa: `coverImage` e `coverAlt` voltam a ser nulos e a
+ * obra passa a aparecer com a ficha do sistema. Nenhum outro dado bibliográfico
+ * é tocado, e a obra não é apagada nem despublicada.
+ *
+ * O arquivo em si só é excluído do storage quando foi enviado pelo painel. As
+ * fotografias do acervo inicial ficam versionadas em `public/acervo/capas` e
+ * continuam lá: desvincular é uma decisão de catalogação, reversível pelo
+ * próximo seed ou por um novo envio, e não um apagamento de arquivo do
+ * repositório.
+ */
+export async function removeCoverAction(
+  _previous: unknown,
+  formData: FormData,
+): Promise<ActionResult<undefined>> {
+  try {
+    const actor = await requirePermission("asset:delete");
+
+    const bookId = String(formData.get("bookId") ?? "");
+    if (!bookId) throw new ValidationError("Obra não identificada.");
+
+    const book = await prisma.book.findUnique({
+      where: { id: bookId },
+      select: {
+        id: true,
+        slug: true,
+        coverImage: true,
+        assets: {
+          where: { kind: AssetKind.COVER },
+          select: { id: true, storageKey: true },
+        },
+      },
+    });
+    if (!book) throw new NotFoundError("Obra não encontrada.");
+    if (!book.coverImage) {
+      throw new ValidationError("Esta obra já está sem capa.");
+    }
+
+    const storage = getStorage();
+    const uploaded = book.assets.find(
+      (asset) => storage.getUrl(asset.storageKey) === book.coverImage,
+    );
+
+    await prisma.$transaction(async (tx) => {
+      await tx.book.update({
+        where: { id: book.id },
+        data: { coverImage: null, coverAlt: null },
+      });
+      if (uploaded) {
+        await tx.digitalAsset.delete({ where: { id: uploaded.id } });
+      }
+    });
+
+    if (uploaded) await storage.delete(uploaded.storageKey);
+
+    audit("acervo.capa_removida", {
+      bookId: book.id,
+      arquivoRemovido: Boolean(uploaded),
+      actorId: actor.id,
+    });
+
+    revalidateBook(book.slug);
+    revalidatePath(`/admin/acervo/${book.id}`);
+    revalidatePath("/admin/arquivos");
+    return actionOk();
+  } catch (error) {
     return actionError(error);
   }
 }

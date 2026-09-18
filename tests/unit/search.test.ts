@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { escapeLike, normalizeText, slugify, tokenizeQuery } from "@/lib/text";
+import {
+  escapeLike,
+  normalizeText,
+  slugify,
+  sortableTitle,
+  tokenizeQuery,
+} from "@/lib/text";
 import { composeSearchText } from "@/server/services/search-text";
 import {
   buildCatalogQuery,
@@ -35,7 +41,7 @@ describe("normalização de texto", () => {
   });
 
   it("normaliza aspas tipográficas", () => {
-    expect(normalizeText("“Negra Soul”")).toBe("'negra soul'");
+    expect(normalizeText("“Negra Sou!”")).toBe("'negra sou!'");
   });
 
   it("é idempotente", () => {
@@ -150,7 +156,8 @@ describe("parâmetros de busca da URL", () => {
   it("aplica padrões quando a URL está vazia", () => {
     const params = parseCatalogSearchParams({});
     expect(params.q).toBe("");
-    expect(params.sort).toBe("recentes");
+    // Navegar o catálogo é percorrer a estante: A→Z, não ordem de catalogação.
+    expect(params.sort).toBe("titulo-asc");
     expect(params.page).toBe(1);
   });
 
@@ -173,7 +180,7 @@ describe("parâmetros de busca da URL", () => {
       page: "não é número",
       type: "FORMATO_INVALIDO",
     });
-    expect(params.sort).toBe("recentes");
+    expect(params.sort).toBe("titulo-asc");
     expect(params.page).toBe(1);
     expect(params.type).toBeUndefined();
   });
@@ -189,15 +196,66 @@ describe("parâmetros de busca da URL", () => {
     ).toBe("?q=educacao&category=historia");
 
     // Valores padrão são omitidos da URL.
-    expect(buildCatalogQuery({ sort: "recentes", page: 1 })).toBe("");
+    expect(buildCatalogQuery({ sort: "titulo-asc", page: 1 })).toBe("");
+    expect(buildCatalogQuery({ sort: "recentes" })).toBe("?sort=recentes");
     expect(buildCatalogQuery({ page: 2 })).toBe("?page=2");
   });
 
   it("faz o ciclo completo URL → filtros → URL", () => {
-    const original = { q: "etnico", category: "educacao", sort: "titulo-asc", page: "2" };
+    const original = { q: "etnico", category: "educacao", sort: "acessos", page: "2" };
     const parsed = parseCatalogSearchParams(original);
     expect(buildCatalogQuery(parsed)).toBe(
-      "?q=etnico&category=educacao&sort=titulo-asc&page=2",
+      "?q=etnico&category=educacao&sort=acessos&page=2",
     );
+  });
+});
+
+/**
+ * Ordenação alfabética.
+ *
+ * O acervo é lido como uma estante, e a estante do NEABI é em português: um
+ * título acentuado não pode cair no fim da lista porque a collation do banco
+ * ordena por byte, nem "Cadernos PENESB 10" vir antes do 3 porque o número foi
+ * comparado como texto.
+ */
+describe("chave de ordenação de títulos", () => {
+  const ordenar = (titulos: string[]) =>
+    [...titulos].sort((a, b) => sortableTitle(a).localeCompare(sortableTitle(b)));
+
+  it("põe acentuadas no lugar da letra sem acento", () => {
+    expect(
+      ordenar([
+        "Vozes Negras no Serviço Público",
+        "Espírito das Periferias",
+        "Etnopesquisa Crítica e Etnopesquisa-Formação",
+        "A África Explicada aos Meus Filhos",
+      ]),
+    ).toEqual([
+      "A África Explicada aos Meus Filhos",
+      "Espírito das Periferias",
+      "Etnopesquisa Crítica e Etnopesquisa-Formação",
+      "Vozes Negras no Serviço Público",
+    ]);
+  });
+
+  it("ordena numerais de série pelo valor, não pelo dígito", () => {
+    expect(
+      ordenar([
+        "Cadernos PENESB 10",
+        "Cadernos PENESB 3",
+        "Cadernos PENESB 1",
+        "Cadernos PENESB 6",
+      ]),
+    ).toEqual([
+      "Cadernos PENESB 1",
+      "Cadernos PENESB 3",
+      "Cadernos PENESB 6",
+      "Cadernos PENESB 10",
+    ]);
+  });
+
+  it("ignora maiúsculas e pontuação de abertura", () => {
+    expect(sortableTitle("«Negra Sou!»")).toBe(sortableTitle("negra sou!»"));
+    expect(sortableTitle("Negra Sou!")).toBe("negra sou!");
   });
 });

@@ -44,6 +44,15 @@ export interface SeedBook {
   /** Assuntos livres, tal como descritos na ficha do NEABI. */
   subjects: string[];
   featured?: boolean;
+  /**
+   * A obra permanece sem fotografia de capa por decisão do projeto.
+   *
+   * Sem esta marca, a ausência apareceria no relatório do seed como uma
+   * pendência a resolver, e alguém acabaria "resolvendo-a" com a capa de outra
+   * edição ou uma imagem gerada. Marcada, o seed a reporta como decisão —
+   * e a obra aparece no site com a ficha do sistema.
+   */
+  coverIntentionallyAbsent?: boolean;
 }
 
 /** Categorias de navegação do acervo (as mesmas dos filtros rápidos). */
@@ -278,8 +287,8 @@ export const SEED_BOOKS: SeedBook[] = [
     subjects: ["Políticas Educacionais"],
   },
   {
-    slug: "negra-soul",
-    title: "Negra Soul",
+    slug: "negra-sou",
+    title: "Negra Sou!",
     materialType: "BOOK",
     catalogingStatus: "NEEDS_REVIEW",
     contributors: [
@@ -354,6 +363,10 @@ export const SEED_BOOKS: SeedBook[] = [
     contributors: [{ name: "Iolanda Oliveira", role: "AUTHOR" }],
     categories: ["relacoes-etnico-raciais", "educacao"],
     subjects: ["Infância", "Juventude", "Desigualdade"],
+    // Única obra do acervo inicial sem fotografia de capa, por decisão do
+    // projeto. Não procurar imagem alternativa, não reaproveitar a capa de
+    // outra obra, não gerar nada: ela aparece com a ficha do sistema.
+    coverIntentionallyAbsent: true,
   },
   {
     slug: "espirito-das-periferias",

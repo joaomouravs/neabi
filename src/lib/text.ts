@@ -55,3 +55,28 @@ export function truncate(value: string, max: number): string {
   if (value.length <= max) return value;
   return `${value.slice(0, Math.max(0, max - 1)).trimEnd()}…`;
 }
+
+/**
+ * Chave de ordenação alfabética de um título.
+ *
+ * O acervo é catalogado em português, e a ordenação precisa ser a de um
+ * catálogo impresso: "Espírito" antes de "Etnopesquisa", "África" junto de
+ * "Africa". Duas armadilhas justificam uma chave derivada em vez de ordenar
+ * pela coluna `title`:
+ *
+ *  - a ordenação do PostgreSQL depende da *collation* do banco, que varia entre
+ *    a máquina de desenvolvimento e o provedor gerenciado. Com a collation `C`,
+ *    "Á" vai parar depois de "Z" e o acervo aparece fora de ordem;
+ *  - números em títulos de série ordenam como texto: "Cadernos PENESB 10"
+ *    entraria entre o 1 e o 3.
+ *
+ * A chave resolve os dois casos: normaliza os diacríticos e preenche cada
+ * sequência de dígitos com zeros à esquerda, o que dá ordem natural a "PENESB
+ * 1 < 3 < 4 < 6 < 10". A pontuação de abertura é descartada para que «"Negra
+ * Sou!"» e "Negra Sou!" caiam no mesmo lugar.
+ */
+export function sortableTitle(title: string): string {
+  return normalizeText(title)
+    .replace(/^[^\p{L}\p{N}]+/u, "")
+    .replace(/\d+/g, (digits) => digits.padStart(6, "0"));
+}

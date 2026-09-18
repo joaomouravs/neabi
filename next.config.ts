@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+import { LEGACY_BOOK_SLUGS } from "./src/config/legacy-slugs";
+
 /**
  * Cabeçalhos de segurança.
  *
@@ -65,6 +67,27 @@ const nextConfig: NextConfig = {
     // Fotografias de capa em proporção 3:4 — larguras suficientes para o grid.
     deviceSizes: [360, 480, 640, 768, 1024, 1280, 1536],
     imageSizes: [96, 128, 200, 260, 320, 384],
+  },
+
+  /**
+   * Obras que mudaram de slug continuam respondendo no endereço antigo.
+   *
+   * O `:path*` leva junto as rotas filhas — /reservar, /ler — e o 308 preserva
+   * o método e avisa buscadores de que a mudança é definitiva.
+   */
+  async redirects() {
+    return Object.entries(LEGACY_BOOK_SLUGS).flatMap(([from, to]) => [
+      {
+        source: `/acervo/${from}`,
+        destination: `/acervo/${to}`,
+        permanent: true,
+      },
+      {
+        source: `/acervo/${from}/:path*`,
+        destination: `/acervo/${to}/:path*`,
+        permanent: true,
+      },
+    ]);
   },
 
   async headers() {

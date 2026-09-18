@@ -126,6 +126,7 @@ export type AuditEvent =
   | "arquivo.enviado"
   | "arquivo.autorizado"
   | "arquivo.removido"
+  | "acervo.capa_removida"
   | "arquivo.falha"
   | "configuracoes.atualizadas"
   | "banco.falha";

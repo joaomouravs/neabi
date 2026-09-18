@@ -293,22 +293,43 @@ nem contatos já preenchidos pela equipe.
 ## Capas das obras
 
 As capas são **fotografias dos exemplares físicos reais**. Nenhuma é gerada,
-redesenhada ou substituída por outra edição.
+redesenhada ou substituída por outra edição. Hoje 20 das 21 obras têm
+fotografia vinculada, em WebP de qualidade 95 — as fotos chegaram em PNG, que é
+o formato errado para fotografia: 37,5 MB viraram 5,1 MB sem tocar em dimensão,
+enquadramento ou cor.
 
 Coloque os arquivos em `public/acervo/capas/` nomeados pelo slug da obra:
 
 ```
-public/acervo/capas/espirito-das-periferias.jpg
+public/acervo/capas/espirito-das-periferias.webp
 ```
 
-e rode `npm run db:seed`. O seed vincula cada arquivo encontrado e avisa sobre
-nomes que não correspondem a nenhuma obra. A lista completa de slugs está em
+e rode `npm run db:seed`. O seed vincula cada arquivo encontrado, preenche o
+texto alternativo quando a equipe ainda não escreveu um e avisa sobre nomes que
+não correspondem a nenhuma obra. A lista completa está em
 `public/acervo/capas/README.md`.
 
-Enquanto a fotografia não existir, `coverImage` fica `null` e a obra aparece com
-um cartão tipográfico com o título real — nunca com uma capa fabricada. Fotos
-tiradas com o livro sobre a mesa são aceitas normalmente: a interface usa
-`object-fit: cover` e não recompõe nada.
+O caminho da capa vive no banco (`Book.coverImage`), nunca em mapas dentro dos
+componentes: quem exibe uma capa lê o dado da obra. Pelo painel, em
+Acervo → obra → Arquivos, a equipe adiciona, substitui e remove a capa —
+remover zera apenas `coverImage`/`coverAlt`, sem tocar em nenhum outro dado.
+
+As fotos têm proporções diferentes entre si e **nunca são distorcidas**: no
+grid a foto é enquadrada (`object-fit: cover`) numa área de proporção fixa, o
+que mantém os cartões da mesma altura, e na página da obra ela aparece inteira
+(`object-fit: contain`). Fotos tiradas com o livro sobre a mesa são aceitas
+normalmente.
+
+Sem fotografia — ou se o arquivo indicado falhar ao carregar — entra
+`BookCoverPlaceholder`: uma ficha do sistema em tipografia institucional, com a
+etiqueta "Sem fotografia de capa", que é assumidamente uma ficha da biblioteca e
+nunca uma capa fabricada.
+
+**Desigualdades Raciais: Construções da Infância e da Juventude**, de Iolanda
+Oliveira, permanece sem capa por decisão do projeto — marcada como
+`coverIntentionallyAbsent` em `prisma/acervo-inicial.ts` para que a ausência
+seja lida como decisão, e não como pendência a "resolver" com a capa de outra
+obra.
 
 ## Autenticação e papéis
 
@@ -474,7 +495,7 @@ apenas se parece com um erro de permissão.
 | Rota | Descrição |
 |---|---|
 | `/` | Home: hero, busca, acervo em destaque, eixos temáticos |
-| `/acervo` | Catálogo com busca, filtros, ordenação e paginação |
+| `/acervo` | Catálogo com busca, filtros e paginação, em ordem alfabética por padrão |
 | `/acervo/[slug]` | Página da obra: ficha, disponibilidade, obras relacionadas |
 | `/acervo/[slug]/reservar` | Formulário de reserva presencial (exige conta) |
 | `/acervo/[slug]/reservar/confirmacao` | Protocolo e orientações |
@@ -582,7 +603,9 @@ Meta: **WCAG 2.1 nível AA**.
 
 Itens que dependem de informação institucional e ficaram deliberadamente vazios:
 
-1. **Fotografias das capas** — colocar em `public/acervo/capas/` (ver acima).
+1. **Fotografia da capa de uma obra** — 20 das 21 já estão vinculadas.
+   "Desigualdades Raciais" permanece sem capa por decisão do projeto; qualquer
+   obra nova segue o caminho descrito em [Capas das obras](#capas-das-obras).
 2. **Contatos** — e-mail, telefone e endereço não foram preenchidos para não
    publicar dado incorreto. Configure em `/admin/configuracoes`; a interface
    omite as linhas em branco.

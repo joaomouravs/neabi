@@ -34,7 +34,14 @@ export function CoverComposition({
   books: BookCardRecord[];
   className?: string;
 }) {
-  const shown = books.slice(0, SLOTS.length);
+  // A composição é a primeira imagem do site: nela cabem as obras que têm
+  // fotografia. As demais continuam em destaque logo abaixo, no trilho de
+  // cartões — a ficha do sistema é boa num cartão de catálogo e fraca como
+  // ilustração de abertura. A ordem editorial dos destaques é preservada
+  // dentro de cada grupo.
+  const shown = [...books]
+    .sort((a, b) => Number(Boolean(b.coverImage)) - Number(Boolean(a.coverImage)))
+    .slice(0, SLOTS.length);
   if (shown.length === 0) return null;
   const front = shown[0];
 

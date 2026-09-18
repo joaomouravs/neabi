@@ -149,9 +149,9 @@ export const bookStatusLabels = {
 // ---------------------------------------------------------------------------
 
 export const SORT_OPTIONS = [
-  { value: "recentes", label: "Mais recentes" },
   { value: "titulo-asc", label: "Título A–Z" },
   { value: "titulo-desc", label: "Título Z–A" },
+  { value: "recentes", label: "Mais recentes" },
   { value: "ano-desc", label: "Ano mais recente" },
   { value: "ano-asc", label: "Ano mais antigo" },
   { value: "acessos", label: "Mais acessados" },
@@ -159,7 +159,13 @@ export const SORT_OPTIONS = [
 
 export type SortOption = (typeof SORT_OPTIONS)[number]["value"];
 
-export const DEFAULT_SORT: SortOption = "recentes";
+/**
+ * Navegar um acervo é percorrer uma estante: a ordem esperada é a alfabética,
+ * não a da última catalogação. "Mais recentes" continua a um clique de
+ * distância, e a home mantém sua própria curadoria de destaques — ordem de
+ * catálogo e ordem editorial são coisas diferentes.
+ */
+export const DEFAULT_SORT: SortOption = "titulo-asc";
 
 // ---------------------------------------------------------------------------
 // Filtros rápidos da página do acervo
