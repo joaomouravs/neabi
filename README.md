@@ -19,6 +19,7 @@ armazenamento de arquivos.
 - [Instalação](#instalação)
 - [Variáveis de ambiente](#variáveis-de-ambiente)
 - [Banco de dados](#banco-de-dados)
+- [Backup e restauração](#backup-e-restauração)
 - [Seed e acervo inicial](#seed-e-acervo-inicial)
 - [Capas das obras](#capas-das-obras)
 - [Autenticação e papéis](#autenticação-e-papéis)
@@ -273,6 +274,58 @@ de uma otimização. O script aplica o índice quando dá e apenas avisa quando 
 ```bash
 npm run db:indices
 ```
+
+## Backup e restauração
+
+O banco de produção está no **plano Free da Neon**: a restauração a um
+instante passado alcança só as **últimas 6 horas**, e backup agendado não está
+disponível nesse plano. Um erro percebido no dia seguinte não teria volta só
+com a Neon.
+
+Por isso o repositório faz o próprio backup
+(`.github/workflows/backup-banco.yml`):
+
+- **todo dia às 03:00** (horário de Nova Iguaçu) e sob demanda, em GitHub →
+  Actions → "Backup do banco" → *Run workflow*;
+- `pg_dump` com o cliente da mesma versão do servidor (Postgres 18);
+- **cada backup é restaurado** num Postgres descartável antes de ser guardado,
+  e a execução falha se a restauração não trouxer as obras — backup que nunca
+  foi restaurado é uma hipótese;
+- cifrado com AES-256 (`gpg`) antes de sair do runner;
+- guardado como artefato da execução por **30 dias**, num repositório privado.
+
+Secrets do repositório: `BACKUP_DATABASE_URL` (a conexão **direta** — valor de
+`DATABASE_URL_UNPOOLED` na Vercel) e `BACKUP_PASSPHRASE` (a senha da cifra).
+
+> **Guarde a senha da cifra fora do GitHub**, num gerenciador de senhas da
+> equipe. O GitHub não deixa ler um secret de volta: sem uma cópia, nenhum
+> backup pode ser aberto. Se a senha mudar, os backups antigos continuam
+> exigindo a senha antiga.
+
+Se a execução falhar, o GitHub avisa por e-mail quem configurou o workflow.
+
+### Restaurar
+
+Nunca restaure por cima do banco em uso sem antes conferir o backup. O caminho
+seguro é restaurar num banco novo — um branch da Neon ou o Postgres local — e
+só então decidir.
+
+```bash
+# 1. Baixe o backup do dia escolhido (lista: gh run list -w "Backup do banco")
+gh run download <id-da-execucao> --repo joaomouravs/neabi --dir backup
+
+# 2. Decifre — pede a senha da cifra
+gpg --decrypt --output banco.dump backup/*/neabi-banco-*.dump.gpg
+
+# 3. Restaure num banco vazio, com pg_restore 18 ou mais novo
+createdb neabi_restaurado
+pg_restore --no-owner --no-privileges -d neabi_restaurado banco.dump
+```
+
+Para trocar o banco de produção pelo restaurado, crie um branch na Neon,
+restaure nele, confira, e só então aponte `DATABASE_URL` para ele — ou use a
+restauração de branch da própria Neon, se o problema estiver dentro das últimas
+6 horas. Apague `banco.dump` ao terminar: ele contém dados pessoais.
 
 ## Seed e acervo inicial
 
@@ -682,9 +735,10 @@ Itens que dependem de informação institucional e ficaram deliberadamente vazio
     encarregado (DPO), a base legal nem o prazo de retenção dos dados, porque
     são definições institucionais. Preencha-os em `/privacidade` com o setor
     responsável do CEFET/RJ.
-11. **Backup** — o Neon guarda histórico para restauração conforme o plano
-    contratado; confirme a janela de restauração do plano em uso e defina uma
-    cópia periódica independente (`pg_dump` agendado) e quem a guarda.
+11. **Backup** — o backup diário independente está configurado (ver
+    [Backup e restauração](#backup-e-restauração)). Falta decidir quem guarda a
+    senha da cifra e se vale contratar um plano pago da Neon (Launch: restauração
+    a qualquer instante dos últimos 7 dias e snapshots agendados).
 12. **Domínio** — o site está em `neabi-alpha.vercel.app`. Um endereço
     institucional exige configuração de DNS pelo CEFET/RJ.
 

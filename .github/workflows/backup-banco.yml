@@ -1,0 +1,105 @@
+# Backup diário do banco de produção.
+#
+# O banco está no plano Free da Neon: a restauração a um instante passado
+# alcança só as últimas 6 horas e não há backup agendado. Este workflow
+# completa o que falta — um `pg_dump` por dia, guardado fora da Neon por 30
+# dias, cifrado antes de sair da máquina do GitHub.
+#
+# Secrets do repositório:
+#   BACKUP_DATABASE_URL  conexão DIRETA (sem pooler) ao banco de produção —
+#                        o valor de DATABASE_URL_UNPOOLED na Vercel;
+#   BACKUP_PASSPHRASE    senha da cifra. Guarde uma cópia fora do GitHub: sem
+#                        ela, nenhum backup pode ser aberto.
+#
+# Restauração: README, "Backup e restauração".
+
+name: Backup do banco
+
+on:
+  schedule:
+    # 06:00 UTC = 03:00 em Nova Iguaçu, fora do horário de atendimento.
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-banco
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Confere os secrets
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          test -n "$BACKUP_DATABASE_URL" || { echo "::error::Secret BACKUP_DATABASE_URL ausente."; exit 1; }
+          test -n "$BACKUP_PASSPHRASE" || { echo "::error::Secret BACKUP_PASSPHRASE ausente."; exit 1; }
+
+      # A versão do cliente acompanha a do servidor (Postgres 18 na Neon): um
+      # pg_dump mais antigo que o banco se recusa a exportar.
+      - name: Exporta o banco
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+        run: |
+          umask 077
+          docker run --rm -e BACKUP_DATABASE_URL postgres:18 \
+            sh -c 'pg_dump "$BACKUP_DATABASE_URL" --format=custom --no-owner --no-privileges' \
+            > banco.dump
+          echo "Tamanho do dump: $(stat -c %s banco.dump) bytes"
+
+      # Um arquivo que o pg_restore não consegue listar não é backup.
+      - name: Confere a integridade do dump
+        run: |
+          test -s banco.dump
+          docker run --rm -v "$PWD:/b:ro" postgres:18 pg_restore --list /b/banco.dump > lista.txt
+          tabelas=$(grep -c " TABLE DATA " lista.txt || true)
+          echo "Tabelas com dados no dump: $tabelas"
+          test "$tabelas" -ge 20 || { echo "::error::Dump com menos tabelas que o esperado."; exit 1; }
+
+      # Backup que nunca foi restaurado é uma hipótese. Restaura num Postgres
+      # descartável e confere as tabelas que importam.
+      - name: Testa a restauração
+        run: |
+          docker run -d --name restauracao -e POSTGRES_PASSWORD=teste postgres:18 > /dev/null
+          for i in $(seq 1 30); do
+            docker exec restauracao pg_isready -U postgres > /dev/null 2>&1 && break
+            sleep 1
+          done
+          docker cp banco.dump restauracao:/tmp/banco.dump
+          docker exec restauracao createdb -U postgres neabi
+          docker exec restauracao pg_restore -U postgres -d neabi --no-owner --no-privileges --exit-on-error /tmp/banco.dump
+          docker exec restauracao psql -U postgres -d neabi -At -c \
+            'select format($$obras=%s exemplares=%s contas=%s reservas=%s migracoes=%s$$,
+               (select count(*) from "Book"), (select count(*) from "PhysicalCopy"),
+               (select count(*) from "User"), (select count(*) from "Reservation"),
+               (select count(*) from "_prisma_migrations"))' | tee contagem.txt
+          obras=$(sed -E 's/.*obras=([0-9]+).*/\1/' contagem.txt)
+          test "$obras" -gt 0 || { echo "::error::A restauração não trouxe nenhuma obra."; exit 1; }
+          docker rm -f restauracao > /dev/null
+          rm -f contagem.txt
+
+      - name: Cifra o dump
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          nome="neabi-banco-$(date -u +%Y-%m-%dT%H%MZ).dump.gpg"
+          printf '%s' "$BACKUP_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback \
+            --passphrase-fd 0 --symmetric --cipher-algo AES256 --output "$nome" banco.dump
+          shred -u banco.dump lista.txt
+          echo "ARQUIVO=$nome" >> "$GITHUB_ENV"
+
+      - name: Guarda o backup por 30 dias
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARQUIVO }}
+          path: ${{ env.ARQUIVO }}
+          retention-days: 30
+          # Conteúdo cifrado não comprime.
+          compression-level: 0
+          if-no-files-found: error
