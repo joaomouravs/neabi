@@ -27,9 +27,11 @@ export const LOGIN_ACCOUNT_WINDOW_MS = 15 * 60 * 1000;
  * sessões de banco, e o adapter Prisma segue configurado para que provedores
  * OAuth institucionais possam ser adicionados depois sem migração de dados.
  *
- * O papel (`role`) é gravado no token na autenticação e revalidado a cada
- * atualização de sessão: uma promoção ou rebaixamento tem efeito sem exigir
- * novo login, e uma conta desativada perde acesso imediatamente.
+ * O papel (`role`) é gravado no token na autenticação e conferido no banco a
+ * cada leitura da sessão: uma promoção ou rebaixamento tem efeito sem exigir
+ * novo login, e uma conta desativada perde acesso imediatamente. O token vale
+ * sete dias — sem essa conferência, uma pessoa administradora rebaixada ou uma
+ * conta desativada seguiriam com o acesso antigo até o token expirar.
  */
 export const authConfig: NextAuthConfig = {
   adapter: PrismaAdapter(prisma),
@@ -114,22 +116,25 @@ export const authConfig: NextAuthConfig = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id as string;
         token.role = (user as { role?: Role }).role ?? Role.MEMBER;
         return token;
       }
 
-      if (trigger === "update" || !token.role) {
-        const current = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: { role: true, active: true, name: true },
-        });
-        if (!current || !current.active) return null;
-        token.role = current.role;
-        token.name = current.name;
-      }
+      // Toda leitura da sessão, e não só `trigger === "update"`: nada no
+      // sistema dispara essa atualização, então a conferência condicional
+      // nunca acontecia. É uma consulta por chave primária, e `getActor`
+      // deduplica as leituras de uma mesma requisição.
+      if (!token.id) return null;
+      const current = await prisma.user.findUnique({
+        where: { id: token.id as string },
+        select: { role: true, active: true, name: true },
+      });
+      if (!current || !current.active) return null;
+      token.role = current.role;
+      token.name = current.name;
 
       return token;
     },
