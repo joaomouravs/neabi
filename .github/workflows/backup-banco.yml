@@ -95,7 +95,7 @@ jobs:
           echo "ARQUIVO=$nome" >> "$GITHUB_ENV"
 
       - name: Guarda o backup por 30 dias
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.ARQUIVO }}
           path: ${{ env.ARQUIVO }}
