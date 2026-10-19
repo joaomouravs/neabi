@@ -341,6 +341,15 @@ Contas com e-mail e senha (Auth.js, sessão JWT, hash bcrypt). Três papéis:
 | `EDITOR` | Tudo do MEMBER + catalogar obras, exemplares, categorias, arquivos, conduzir reservas e atender as mensagens de contato |
 | `ADMIN` | Tudo + autorizar consulta digital, excluir obras e mensagens, alterar papéis e editar configurações |
 
+A sessão é um JWT de sete dias, mas a conta é **conferida no banco a cada
+leitura da sessão**: desativar uma conta ou rebaixar um papel tem efeito na
+requisição seguinte, sem esperar o token expirar.
+
+**Senha esquecida.** Sem um provedor de e-mail não há link de recuperação. A
+administração gera uma senha temporária em `/admin/usuarios` → "Redefinir
+senha"; ela aparece uma única vez, não vai para log, e a pessoa a troca em
+Minha conta → Perfil. A tela de entrada explica esse caminho.
+
 As permissões são declaradas em `src/server/permissions/rbac.ts` e verificadas
 **no servidor a cada ação**. O menu nunca é o mecanismo de proteção — mas
 também não oferece o que a pessoa não pode abrir: cada item declara a mesma
@@ -397,6 +406,19 @@ quem descobrir a chave.
 Todo upload valida tipo MIME, tamanho e **assinatura binária** do arquivo — um
 executável renomeado para `.jpg` é recusado. O nome enviado nunca vira caminho:
 a chave é gerada com UUID e extensão derivada do tipo já validado.
+
+> **Limite de 4 MB na Vercel.** Funções da Vercel recusam requisições e
+> respostas acima de 4,5 MB antes de o código rodar — e o upload passa por
+> Server Action e a entrega por `/api/arquivos`. Por isso, na Vercel, capas e
+> PDFs ficam limitados a 4 MB (`uploadLimits()` em `src/server/storage/`); fora
+> dela valem 8 MB para imagem e 60 MB para PDF. O formulário mostra o limite
+> real e recusa o arquivo grande antes de enviá-lo, com uma mensagem clara.
+>
+> PDFs de livros costumam passar de 4 MB. Antes de oferecer consulta digital
+> de obras inteiras na Vercel, o envio precisa ir direto do navegador ao Blob
+> (`@vercel/blob/client`, com token emitido após conferir a permissão) e a
+> entrega precisa ser por streaming, não por `Buffer`. Hoje o acervo não tem
+> nenhum PDF autorizado, então isso não bloqueia o uso atual.
 
 ## E-mail
 
@@ -594,9 +616,22 @@ reserva, alterações no acervo, envio e autorização de arquivos, e mudança d
 configurações. Registram o identificador de quem agiu — nunca nome, e-mail ou
 senha.
 
-> A limitação de taxa é em memória, por processo — adequada a uma instância. Ao
-> escalar horizontalmente, troque o armazenamento em `src/server/rate-limit.ts`
-> por Redis; a interface do módulo não muda.
+> A limitação de taxa é em memória, por processo — adequada a uma instância. Na
+> Vercel, cada instância da função tem a sua própria contagem, então o limite
+> de login vale por instância e não globalmente: ainda dificulta força bruta,
+> mas não a impede de forma estrita. Para um limite global, troque o
+> armazenamento em `src/server/rate-limit.ts` por Redis (ex.: Upstash, pelo
+> Marketplace da Vercel); a interface do módulo não muda.
+
+### Dependências
+
+`npm audit --omit=dev` aponta um alerta remanescente: `nodemailer` ≤ 10.0.5
+(SSRF e leitura de arquivo via opção `raw` ou conteúdo resolvido por caminho ou
+URL). A correção é a série 10, mas o Auth.js exige a série 8 — instalá-la deixa
+a árvore de dependências inválida. O projeto só envia `subject`, `text` e
+`html` como texto e desliga `disableFileAccess`/`disableUrlAccess` no
+transporte, o que fecha os vetores descritos. Atualize quando o `next-auth`
+aceitar `nodemailer` 10.
 
 ## Acessibilidade
 
@@ -639,6 +674,19 @@ Itens que dependem de informação institucional e ficaram deliberadamente vazio
 8. **Marca oficial** — `NeabiMark` é uma composição tipográfica com as cores
    institucionais. Ao receber o arquivo vetorial do núcleo, basta substituir o
    conteúdo desse componente.
+9. **Envio de e-mail** — em produção `MAIL_DRIVER="console"`: aprovação,
+   recusa e prazo de retirada não chegam por e-mail, só aparecem em Minhas
+   reservas, e não há recuperação de senha por link. Exige uma conta SMTP
+   institucional (`SMTP_*`, `MAIL_FROM`) — credencial que só o CEFET/RJ emite.
+10. **LGPD** — a política de privacidade não identifica o controlador, o
+    encarregado (DPO), a base legal nem o prazo de retenção dos dados, porque
+    são definições institucionais. Preencha-os em `/privacidade` com o setor
+    responsável do CEFET/RJ.
+11. **Backup** — o Neon guarda histórico para restauração conforme o plano
+    contratado; confirme a janela de restauração do plano em uso e defina uma
+    cópia periódica independente (`pg_dump` agendado) e quem a guarda.
+12. **Domínio** — o site está em `neabi-alpha.vercel.app`. Um endereço
+    institucional exige configuração de DNS pelo CEFET/RJ.
 
 ---
 
