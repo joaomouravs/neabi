@@ -485,7 +485,11 @@ Checklist de produção:
 
 1. `DATABASE_URL` apontando para o PostgreSQL gerenciado;
 2. `AUTH_SECRET` gerado com entropia real e `AUTH_URL` com o domínio público;
-3. `npm run db:migrate` (não use `db:push` em produção);
+3. migrações aplicadas — na Vercel, o próprio build de **produção** roda
+   `prisma migrate deploy` (`scripts/migrate-on-deploy.mjs`) pela conexão
+   direta (`DIRECT_URL`, ou `DATABASE_URL_UNPOOLED` da integração Neon) e
+   falha se não houver uma válida; preview e build local não tocam o banco.
+   Fora da Vercel, `npm run db:migrate`. Nunca `db:push` em produção;
 4. `SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD` definidos antes do `db:seed`;
 5. `STORAGE_DRIVER="s3"` com bucket **privado** e credenciais configuradas;
 6. `MAIL_DRIVER="smtp"` configurado;
