@@ -8,10 +8,13 @@ import { expireOverdueReservations } from "@/server/services/reservation-service
 /**
  * Expiração de reservas com prazo de retirada vencido.
  *
- * Pensada para ser chamada por um agendador (cron da hospedagem, GitHub
- * Actions, systemd timer). Sem ela, um exemplar reservado por alguém que nunca
- * apareceu ficaria indisponível para sempre — a regra de prazo existiria no
- * banco sem nada para aplicá-la.
+ * Pensada para ser chamada por um agendador. Sem ela, um exemplar reservado
+ * por alguém que nunca apareceu ficaria indisponível para sempre — a regra de
+ * prazo existiria no banco sem nada para aplicá-la.
+ *
+ * Em produção, quem chama é a Vercel Cron (`vercel.json`), que faz `GET` e
+ * envia `Authorization: Bearer $CRON_SECRET` por conta própria. `POST` segue
+ * aceito para agendadores externos e execução manual:
  *
  *   curl -X POST https://<host>/api/manutencao/expirar-reservas \
  *        -H "Authorization: Bearer $CRON_SECRET"
@@ -30,7 +33,7 @@ function segredoConfere(recebido: string, esperado: string): boolean {
   return timingSafeEqual(a, b);
 }
 
-export async function POST(request: Request): Promise<NextResponse> {
+async function executar(request: Request): Promise<NextResponse> {
   const esperado = process.env.CRON_SECRET;
   if (!esperado) {
     logger.warn("Rota de manutenção chamada sem CRON_SECRET configurado");
@@ -59,3 +62,5 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 }
+
+export { executar as GET, executar as POST };
