@@ -1,6 +1,6 @@
 import { expect, test as setup } from "@playwright/test";
 
-import { ADMIN, MEMBER, storageStateFor } from "./accounts";
+import { ADMIN, EDITOR, MEMBER, storageStateFor } from "./accounts";
 
 /**
  * Autenticação dos testes.
@@ -19,6 +19,11 @@ setup("autentica a pessoa usuária", async ({ page }) => {
 setup("autentica a administração", async ({ page }) => {
   await signIn(page, ADMIN);
   await page.context().storageState({ path: storageStateFor("admin") });
+});
+
+setup("autentica a edição", async ({ page }) => {
+  await signIn(page, EDITOR);
+  await page.context().storageState({ path: storageStateFor("editor") });
 });
 
 async function signIn(

@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import { PatronType, Shift } from "@/generated/prisma/enums";
 import { bookFormSchema } from "@/validators/book";
-import { contactSchema } from "@/validators/contact";
+import {
+  adminContactFiltersSchema,
+  contactSchema,
+  contactStatusUpdateSchema,
+} from "@/validators/contact";
 import { loginSchema, registerSchema } from "@/validators/auth";
 import { reservationFormSchema } from "@/validators/reservation";
 
@@ -242,6 +246,30 @@ describe("contato", () => {
   it("recusa envio com o campo-armadilha preenchido", () => {
     expect(
       contactSchema.safeParse({ ...valid, website: "https://spam.exemplo" })
+        .success,
+    ).toBe(false);
+  });
+
+  it("filtros da caixa de mensagens caem no padrão quando inválidos", () => {
+    expect(
+      adminContactFiltersSchema.parse({ status: "QUALQUER", page: "-3" }),
+    ).toEqual({ status: undefined, q: "", page: 1 });
+    expect(
+      adminContactFiltersSchema.parse({ status: "NEW", q: "  doação ", page: "2" }),
+    ).toEqual({ status: "NEW", q: "doação", page: 2 });
+  });
+
+  it("triagem só aceita situações existentes", () => {
+    expect(
+      contactStatusUpdateSchema.safeParse({ messageId: "abc", status: "ANSWERED" })
+        .success,
+    ).toBe(true);
+    expect(
+      contactStatusUpdateSchema.safeParse({ messageId: "abc", status: "DELETED" })
+        .success,
+    ).toBe(false);
+    expect(
+      contactStatusUpdateSchema.safeParse({ messageId: "", status: "READ" })
         .success,
     ).toBe(false);
   });

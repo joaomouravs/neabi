@@ -1,6 +1,8 @@
 import { z } from "zod";
 
-import { emailSchema, requiredText } from "./common";
+import { ContactStatus } from "@/generated/prisma/enums";
+
+import { cuid, emailSchema, requiredText } from "./common";
 
 export const contactSchema = z.object({
   name: requiredText("o nome", 160),
@@ -25,3 +27,17 @@ export type ContactInput = z.infer<typeof contactSchema>;
 
 /** Envios abaixo deste tempo são quase certamente automatizados. */
 export const CONTACT_MIN_FILL_MS = 2500;
+
+/** Filtros da caixa de mensagens no painel — valores inválidos caem no padrão. */
+export const adminContactFiltersSchema = z.object({
+  status: z.enum(ContactStatus).optional().catch(undefined),
+  q: z.string().trim().max(160).catch("").default(""),
+  page: z.coerce.number().int().min(1).catch(1).default(1),
+});
+
+export type AdminContactFilters = z.infer<typeof adminContactFiltersSchema>;
+
+export const contactStatusUpdateSchema = z.object({
+  messageId: cuid,
+  status: z.enum(ContactStatus, { error: "Situação inválida." }),
+});

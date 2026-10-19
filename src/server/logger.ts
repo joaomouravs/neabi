@@ -129,6 +129,8 @@ export type AuditEvent =
   | "acervo.capa_removida"
   | "arquivo.falha"
   | "configuracoes.atualizadas"
+  | "contato.status_alterado"
+  | "contato.mensagem_removida"
   | "banco.falha";
 
 export function audit(evento: AuditEvent, contexto?: LogContext): void {

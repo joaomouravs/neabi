@@ -36,7 +36,10 @@ export const PERMISSIONS = [
   // Plataforma
   "analytics:read",
   "settings:manage",
+  // Mensagens do formulário de contato
   "contact:read",
+  "contact:manage", // triagem: lida, respondida, arquivada
+  "contact:delete", // exclusão definitiva, a pedido de quem escreveu
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -60,13 +63,17 @@ const EDITOR_PERMISSIONS: readonly Permission[] = [
   "reservation:read:any",
   "reservation:manage",
   "analytics:read",
+  // A política de privacidade promete que as mensagens ficam "disponíveis para
+  // a equipe responder" — e a equipe de atendimento inclui quem edita.
+  "contact:read",
+  "contact:manage",
 ];
 
 /**
  * ADMIN recebe todas as permissões. As que o EDITOR não tem são justamente as
  * "configurações críticas": excluir obras definitivamente, autorizar consulta
- * digital de um PDF, alterar papéis de usuários e editar as configurações
- * institucionais.
+ * digital de um PDF, alterar papéis de usuários, editar as configurações
+ * institucionais e apagar mensagens de contato.
  */
 const ADMIN_PERMISSIONS: readonly Permission[] = [...PERMISSIONS];
 

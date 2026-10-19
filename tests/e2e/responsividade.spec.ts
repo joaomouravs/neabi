@@ -49,6 +49,7 @@ const ROTAS_ADMIN = [
   "/admin/exemplares",
   "/admin/categorias",
   "/admin/reservas",
+  "/admin/mensagens",
   "/admin/usuarios",
   "/admin/arquivos",
   "/admin/analytics",
@@ -132,6 +133,15 @@ test.describe("responsividade", () => {
         const href = await editar.getAttribute("href");
         expect(href).toBeTruthy();
         await verificaRota(page, href!, largura);
+
+        // A mensagem de contato é texto livre de quem escreveu: URLs e e-mails
+        // longos não podem alargar a página.
+        await page.goto("/admin/mensagens");
+        await page.waitForLoadState("networkidle");
+        const abrir = page.getByRole("link", { name: "Abrir" }).first();
+        if (await abrir.count()) {
+          await verificaRota(page, (await abrir.getAttribute("href"))!, largura);
+        }
       });
     }
   });

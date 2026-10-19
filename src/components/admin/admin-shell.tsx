@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Library,
   LogOut,
+  Mail,
   Menu,
   Settings,
   Tags,
@@ -24,41 +25,78 @@ import { useState, type ReactNode } from "react";
 import { logoutAction } from "@/features/auth/actions";
 import { NeabiMark } from "@/components/layout/neabi-mark";
 import { cn } from "@/lib/utils";
+import type { Permission } from "@/server/permissions/rbac";
+
+type BadgeKey = "reservations" | "messages";
 
 interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
+  /** A mesma permissão que a página exige — sem ela, o link levaria a um 403. */
+  permission: Permission;
   exact?: boolean;
-  showsPending?: boolean;
+  badge?: BadgeKey;
 }
+
+/** Complemento lido por leitor de tela depois do número: singular e plural. */
+const BADGE_LABELS: Record<BadgeKey, readonly [string, string]> = {
+  reservations: [" pendente", " pendentes"],
+  messages: [" nova", " novas"],
+};
 
 const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: "Painel",
-    items: [{ href: "/admin", label: "Visão geral", icon: LayoutDashboard, exact: true }],
+    items: [
+      {
+        href: "/admin",
+        label: "Visão geral",
+        icon: LayoutDashboard,
+        permission: "book:read:any",
+        exact: true,
+      },
+    ],
   },
   {
     label: "Acervo",
     items: [
-      { href: "/admin/acervo", label: "Acervo", icon: Library },
-      { href: "/admin/exemplares", label: "Exemplares", icon: BookCopy },
-      { href: "/admin/categorias", label: "Categorias", icon: Tags },
-      { href: "/admin/arquivos", label: "Arquivos", icon: FolderOpen },
+      { href: "/admin/acervo", label: "Acervo", icon: Library, permission: "book:read:any" },
+      { href: "/admin/exemplares", label: "Exemplares", icon: BookCopy, permission: "copy:manage" },
+      { href: "/admin/categorias", label: "Categorias", icon: Tags, permission: "category:manage" },
+      { href: "/admin/arquivos", label: "Arquivos", icon: FolderOpen, permission: "asset:upload" },
     ],
   },
   {
     label: "Atendimento",
     items: [
-      { href: "/admin/reservas", label: "Reservas", icon: CalendarCheck, showsPending: true },
-      { href: "/admin/usuarios", label: "Usuários", icon: Users },
+      {
+        href: "/admin/reservas",
+        label: "Reservas",
+        icon: CalendarCheck,
+        permission: "reservation:read:any",
+        badge: "reservations",
+      },
+      {
+        href: "/admin/mensagens",
+        label: "Mensagens",
+        icon: Mail,
+        permission: "contact:read",
+        badge: "messages",
+      },
+      { href: "/admin/usuarios", label: "Usuários", icon: Users, permission: "user:read:any" },
     ],
   },
   {
     label: "Gestão",
     items: [
-      { href: "/admin/analytics", label: "Analytics", icon: ChartColumn },
-      { href: "/admin/configuracoes", label: "Configurações", icon: Settings },
+      { href: "/admin/analytics", label: "Analytics", icon: ChartColumn, permission: "analytics:read" },
+      {
+        href: "/admin/configuracoes",
+        label: "Configurações",
+        icon: Settings,
+        permission: "settings:manage",
+      },
     ],
   },
 ];
@@ -66,6 +104,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
 export interface AdminShellUser {
   name: string | null;
   roleLabel: string;
+  permissions: readonly Permission[];
 }
 
 /**
@@ -80,11 +119,17 @@ export function AdminShell({
   children,
   user,
   pendingReservations,
+  newMessages,
 }: {
   children: ReactNode;
   user: AdminShellUser;
   pendingReservations: number;
+  newMessages: number;
 }) {
+  const badges: Record<BadgeKey, number> = {
+    reservations: pendingReservations,
+    messages: newMessages,
+  };
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -105,7 +150,7 @@ export function AdminShell({
 
       <aside className="on-dark hidden lg:block">
         <div className="sticky top-0 flex h-dvh flex-col overflow-y-auto bg-neabi-black text-neabi-cream">
-          <SidebarContent pathname={pathname} user={user} pending={pendingReservations} />
+          <SidebarContent pathname={pathname} user={user} badges={badges} />
         </div>
       </aside>
 
@@ -154,7 +199,7 @@ export function AdminShell({
                 <SidebarContent
                   pathname={pathname}
                   user={user}
-                  pending={pendingReservations}
+                  badges={badges}
                   onNavigate={() => setOpen(false)}
                 />
               </Dialog.Content>
@@ -173,17 +218,21 @@ export function AdminShell({
 function SidebarContent({
   pathname,
   user,
-  pending,
+  badges,
   onNavigate,
 }: {
   pathname: string;
   user: AdminShellUser;
-  pending: number;
+  badges: Record<BadgeKey, number>;
   onNavigate?: () => void;
 }) {
   const isActive = (item: NavItem) =>
     item.exact ? pathname === item.href : pathname.startsWith(item.href);
   const initial = (user.name?.trim() || "N").charAt(0).toUpperCase();
+  const groups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => user.permissions.includes(item.permission)),
+  })).filter((group) => group.items.length > 0);
 
   return (
     <>
@@ -196,7 +245,7 @@ function SidebarContent({
       </div>
 
       <nav aria-label="Navegação administrativa" className="flex-1 px-3 pb-4">
-        {NAV_GROUPS.map((group) => (
+        {groups.map((group) => (
           <div key={group.label} className="mt-4">
             <p className="px-3 pb-1.5 font-sans text-[0.625rem] font-semibold uppercase tracking-[0.16em] text-neabi-cream/45">
               {group.label}
@@ -205,6 +254,7 @@ function SidebarContent({
               {group.items.map((item) => {
                 const active = isActive(item);
                 const Icon = item.icon;
+                const count = item.badge ? badges[item.badge] : 0;
                 return (
                   <li key={item.href}>
                     <Link
@@ -229,10 +279,12 @@ function SidebarContent({
                         )}
                       />
                       <span className="flex-1">{item.label}</span>
-                      {item.showsPending && pending > 0 ? (
+                      {item.badge && count > 0 ? (
                         <span className="min-w-5 bg-neabi-amber px-1.5 text-center text-[0.6875rem] font-bold leading-5 tabular-nums text-ink-900">
-                          {pending}
-                          <span className="sr-only">{pending === 1 ? " pendente" : " pendentes"}</span>
+                          {count}
+                          <span className="sr-only">
+                            {BADGE_LABELS[item.badge][count === 1 ? 0 : 1]}
+                          </span>
                         </span>
                       ) : null}
                     </Link>

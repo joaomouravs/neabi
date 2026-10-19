@@ -1,5 +1,6 @@
 import {
   CatalogingStatus,
+  ContactStatus,
   ContributorRole,
   CopyCondition,
   CopyStatus,
@@ -102,6 +103,23 @@ export const reservationStatusGuidance: Record<ReservationStatus, string> = {
     "O pedido não pôde ser atendido. Veja a observação da equipe, quando houver, ou escolha outra data.",
   CANCELLED: "Esta reserva foi cancelada e o exemplar voltou ao acervo.",
   EXPIRED: "O prazo de retirada terminou e o exemplar voltou ao acervo.",
+};
+
+export const contactStatusLabels: Record<ContactStatus, string> = {
+  NEW: "Nova",
+  READ: "Lida",
+  ANSWERED: "Respondida",
+  ARCHIVED: "Arquivada",
+};
+
+export const contactStatusTone: Record<
+  ContactStatus,
+  "neutral" | "amber" | "green" | "red"
+> = {
+  NEW: "amber",
+  READ: "neutral",
+  ANSWERED: "green",
+  ARCHIVED: "neutral",
 };
 
 export const shiftLabels: Record<Shift, string> = {

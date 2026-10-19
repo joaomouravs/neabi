@@ -38,6 +38,11 @@ describe("papel MEMBER", () => {
     expect(can(member, "reservation:manage")).toBe(false);
   });
 
+  it("não lê as mensagens de contato de outras pessoas", () => {
+    expect(can(member, "contact:read")).toBe(false);
+    expect(can(member, "contact:manage")).toBe(false);
+  });
+
   it("não acessa o painel administrativo", () => {
     expect(canAccessAdmin(member)).toBe(false);
   });
@@ -58,6 +63,12 @@ describe("papel EDITOR", () => {
     expect(can(editor, "reservation:read:any")).toBe(true);
   });
 
+  it("lê e faz a triagem das mensagens de contato", () => {
+    // A política de privacidade promete que a equipe responde as mensagens.
+    expect(can(editor, "contact:read")).toBe(true);
+    expect(can(editor, "contact:manage")).toBe(true);
+  });
+
   it("NÃO realiza as configurações críticas reservadas à administração", () => {
     // Liberar consulta digital envolve direito autoral.
     expect(can(editor, "asset:authorize")).toBe(false);
@@ -68,6 +79,8 @@ describe("papel EDITOR", () => {
     expect(can(editor, "user:manage")).toBe(false);
     // Configurações mudam as regras aplicadas a todo mundo.
     expect(can(editor, "settings:manage")).toBe(false);
+    // Apagar uma mensagem elimina dado pessoal sem volta.
+    expect(can(editor, "contact:delete")).toBe(false);
   });
 
   it("acessa o painel administrativo", () => {
