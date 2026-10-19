@@ -84,6 +84,12 @@ class SmtpTransport implements MailTransport {
       host: config.SMTP_HOST,
       port,
       secure: port === 465,
+      // As mensagens são só texto montado pelos templates. Nada nelas deve
+      // fazer o servidor ler um arquivo do disco ou buscar uma URL — defesa
+      // contra as falhas de SSRF/leitura de arquivo do nodemailer ≤ 10.0.5,
+      // que não pode ser atualizado enquanto o Auth.js exigir a série 8.
+      disableFileAccess: true,
+      disableUrlAccess: true,
       auth:
         config.SMTP_USER && config.SMTP_PASSWORD
           ? { user: config.SMTP_USER, pass: config.SMTP_PASSWORD }
@@ -107,6 +113,14 @@ function getTransport(): MailTransport {
   transport =
     env().MAIL_DRIVER === "smtp" ? new SmtpTransport() : new ConsoleTransport();
   return transport;
+}
+
+/**
+ * Se as notificações saem de fato por e-mail. Com `MAIL_DRIVER="console"` elas
+ * só vão para o log — e a interface não pode prometer o contrário.
+ */
+export function emailDeliveryEnabled(): boolean {
+  return env().MAIL_DRIVER === "smtp";
 }
 
 /** Permite injetar um transporte falso nos testes. */

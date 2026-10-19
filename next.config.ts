@@ -46,6 +46,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Anunciar o framework em todo cabeçalho só ajuda quem procura alvo.
+  poweredByHeader: false,
 
   // Em desenvolvimento, o Next trata "localhost" e "127.0.0.1" como origens
   // distintas e bloqueia os recursos internos na segunda. Os testes de ponta a

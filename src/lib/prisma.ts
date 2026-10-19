@@ -1,5 +1,6 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
+import { withVerifiedSsl } from "@/lib/database-url";
 
 /**
  * Cliente Prisma único por processo.
@@ -29,7 +30,7 @@ function createClient(): PrismaClient {
     : undefined;
 
   const adapter = new PrismaPg({
-    connectionString,
+    connectionString: withVerifiedSsl(connectionString),
     ...(poolMax && Number.isFinite(poolMax) ? { max: poolMax } : {}),
   });
 
