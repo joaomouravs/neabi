@@ -488,6 +488,40 @@ versão em texto puro.
 Falha de e-mail nunca desfaz a operação: a reserva já está registrada e o banco
 é a fonte de verdade.
 
+### Ligar o envio com o Resend
+
+O provedor escolhido é o **Resend** (Marketplace da Vercel, plano Free: 3.000
+e-mails por mês, 100 por dia), usado por SMTP — o transporte do projeto não
+muda. Os termos já foram aceitos na conta da Vercel; falta só o **domínio**,
+que o Resend exige na criação e **não deixa trocar depois**. Sem domínio
+verificado, ele só entrega para o e-mail da própria conta — por isso o envio
+segue desligado (`MAIL_DRIVER="console"`) até lá.
+
+Com o domínio decidido (um subdomínio do CEFET/RJ, ou um domínio próprio):
+
+```bash
+# 1. Cria o recurso no plano gratuito, enviando a partir de São Paulo
+vercel integration add resend --plan free --name neabi-email   -m domain=<dominio> -m region=sa-east-1 --scope joaomouravs-projects
+
+# 2. Adicione no DNS do domínio os registros que o Resend mostrar
+#    (SPF, DKIM e MX de retorno) e aguarde a verificação no painel do Resend.
+
+# 3. Variáveis de produção — nenhuma é segredo; a senha vem da integração
+vercel env add MAIL_DRIVER production   # smtp
+vercel env add SMTP_HOST production     # smtp.resend.com
+vercel env add SMTP_PORT production     # 465
+vercel env add SMTP_USER production     # resend
+vercel env add MAIL_FROM production     # Biblioteca NEABI-NI <nao-responda@<dominio>>
+```
+
+`SMTP_PASSWORD` fica sem valor de propósito: no SMTP do Resend a senha é a
+chave da API, e o transporte usa `RESEND_API_KEY`, que a integração injeta e
+renova sozinha.
+
+Depois do deploy, em **Configurações → E-mail**, use "Enviar e-mail de teste
+para a minha conta": a mensagem sai pelo provedor real e, se ele recusar, o
+erro dele aparece na tela.
+
 As mensagens do formulário de contato **não dependem de e-mail**: ficam no
 banco e são lidas em `/admin/mensagens`, com selo de mensagens novas no menu.
 Abrir uma mensagem a marca como lida; "respondida" e "arquivada" são marcadas
@@ -728,9 +762,10 @@ Itens que dependem de informação institucional e ficaram deliberadamente vazio
    institucionais. Ao receber o arquivo vetorial do núcleo, basta substituir o
    conteúdo desse componente.
 9. **Envio de e-mail** — em produção `MAIL_DRIVER="console"`: aprovação,
-   recusa e prazo de retirada não chegam por e-mail, só aparecem em Minhas
-   reservas, e não há recuperação de senha por link. Exige uma conta SMTP
-   institucional (`SMTP_*`, `MAIL_FROM`) — credencial que só o CEFET/RJ emite.
+   recusa e prazo de retirada só aparecem em Minhas reservas. Resend escolhido
+   e termos aceitos; falta decidir o **domínio remetente** (subdomínio do
+   CEFET/RJ ou domínio próprio). Passo a passo em
+   [Ligar o envio com o Resend](#ligar-o-envio-com-o-resend).
 10. **LGPD** — a política de privacidade não identifica o controlador, o
     encarregado (DPO), a base legal nem o prazo de retenção dos dados, porque
     são definições institucionais. Preencha-os em `/privacidade` com o setor
