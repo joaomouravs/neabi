@@ -58,11 +58,14 @@ export function ReservationActions({
   status,
   copies,
   currentCopyId,
+  emailEnabled,
 }: {
   reservationId: string;
   status: ReservationStatus;
   copies: { id: string; code: string; status: CopyStatus }[];
   currentCopyId: string | null;
+  /** Sem envio de e-mail configurado, a pessoa só vê a observação na conta. */
+  emailEnabled: boolean;
 }) {
   const [state, action, pending] = useActionState<State, FormData>(
     manageReservationAction,
@@ -154,7 +157,9 @@ export function ReservationActions({
           <Field
             description={
               openAction === "reject"
-                ? "A observação é enviada por e-mail à pessoa solicitante."
+                ? emailEnabled
+                  ? "A observação é enviada por e-mail à pessoa solicitante."
+                  : "A pessoa solicitante vê a observação em Minhas reservas. O envio de e-mail não está configurado."
                 : "Registrada no histórico da reserva."
             }
           >

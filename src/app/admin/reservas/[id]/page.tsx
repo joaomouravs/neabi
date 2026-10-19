@@ -11,6 +11,7 @@ import { patronTypeLabels, shiftLabels } from "@/config/catalog";
 import { formatDate, formatDateTime, formatLongDate } from "@/lib/date";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/server/auth/session";
+import { emailDeliveryEnabled } from "@/server/notifications";
 import { findReservationById } from "@/server/repositories/reservation-repository";
 
 type Params = Promise<{ id: string }>;
@@ -51,6 +52,7 @@ export default async function AdminReservationDetailPage({
         <div className="flex flex-col gap-6">
           <AdminSection title="Ações">
             <ReservationActions
+              emailEnabled={emailDeliveryEnabled()}
               reservationId={reservation.id}
               status={reservation.status}
               copies={copies}
@@ -124,6 +126,7 @@ export default async function AdminReservationDetailPage({
         <div className="flex flex-col gap-6">
           <AdminSection title="Solicitante">
             <MetadataList
+              stacked
               items={[
                 { label: "Nome", value: reservation.fullName },
                 {
