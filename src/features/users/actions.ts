@@ -1,5 +1,8 @@
 "use server";
 
+import { randomInt } from "node:crypto";
+
+import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -134,6 +137,73 @@ export async function setUserActiveAction(
 
     revalidatePath("/admin/usuarios");
     return actionOk();
+  } catch (error) {
+    return actionError(error);
+  }
+}
+
+/**
+ * Sem alfabeto ambíguo (0/O, 1/l/I): a senha é lida em voz alta ou copiada à
+ * mão no balcão. Doze símbolos de 54 dão cerca de 69 bits de entropia.
+ */
+const TEMPORARY_PASSWORD_ALPHABET =
+  "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+function generateTemporaryPassword(): string {
+  const symbols = Array.from(
+    { length: 12 },
+    () => TEMPORARY_PASSWORD_ALPHABET[randomInt(TEMPORARY_PASSWORD_ALPHABET.length)],
+  ).join("");
+  return `${symbols.slice(0, 4)}-${symbols.slice(4, 8)}-${symbols.slice(8)}`;
+}
+
+const resetPasswordSchema = z.object({
+  userId: z.string().min(1, "Usuário não identificado.").max(64),
+});
+
+/**
+ * Redefinição de senha assistida pela equipe.
+ *
+ * Sem um provedor de e-mail configurado, não há como enviar um link de
+ * recuperação: quem esquecesse a senha ficaria sem acesso à conta e ao
+ * histórico de reservas. A administração gera uma senha temporária, mostrada
+ * uma única vez e nunca registrada em log, e a entrega à pessoa — que a troca
+ * em Minha conta → Perfil.
+ */
+export async function resetUserPasswordAction(
+  _previous: unknown,
+  formData: FormData,
+): Promise<ActionResult<{ temporaryPassword: string }>> {
+  try {
+    const actor = await requirePermission("user:manage");
+
+    const parsed = resetPasswordSchema.safeParse({ userId: formData.get("userId") });
+    if (!parsed.success) throw new ValidationError("Usuário não identificado.");
+
+    if (parsed.data.userId === actor.id) {
+      throw new ConflictError(
+        "Para trocar a sua própria senha, use Minha conta → Perfil.",
+      );
+    }
+
+    const target = await prisma.user.findUnique({
+      where: { id: parsed.data.userId },
+      select: { id: true, active: true },
+    });
+    if (!target) throw new NotFoundError("Usuário não encontrado.");
+    if (!target.active) {
+      throw new ConflictError("Reative a conta antes de redefinir a senha.");
+    }
+
+    const temporaryPassword = generateTemporaryPassword();
+    await prisma.user.update({
+      where: { id: target.id },
+      data: { passwordHash: await bcrypt.hash(temporaryPassword, 12) },
+    });
+
+    audit("conta.senha_redefinida", { userId: target.id, actorId: actor.id });
+
+    return actionOk({ temporaryPassword });
   } catch (error) {
     return actionError(error);
   }

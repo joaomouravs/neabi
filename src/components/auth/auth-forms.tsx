@@ -167,6 +167,17 @@ function SignInFields({
       <Button type="submit" size="lg" loading={pending || redirecting} className="mt-1 w-full">
         {pending ? "Entrando…" : redirecting ? "Redirecionando…" : "Entrar"}
       </Button>
+
+      {/* Sem e-mail configurado não há link de recuperação: a equipe gera uma
+          senha temporária no painel (Usuários → Redefinir senha). */}
+      <p className="text-[0.8125rem] leading-relaxed text-ink-600">
+        Esqueceu a senha? A equipe do NEABI gera uma senha temporária para você.
+        Peça no atendimento presencial ou pelo{" "}
+        <Link href="/contato" className="link-underline font-medium text-ink-900">
+          formulário de contato
+        </Link>
+        , usando o e-mail da conta.
+      </p>
     </form>
   );
 }

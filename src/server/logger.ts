@@ -115,6 +115,7 @@ export type AuditEvent =
   | "login.bloqueado"
   | "conta.criada"
   | "conta.senha_alterada"
+  | "conta.senha_redefinida"
   | "conta.papel_alterado"
   | "conta.ativacao_alterada"
   | "reserva.criada"

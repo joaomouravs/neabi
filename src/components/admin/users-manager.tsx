@@ -1,14 +1,16 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import { Td } from "@/components/admin/admin-ui";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CopyButton } from "@/components/ui/copy-button";
 import { Alert } from "@/components/ui/feedback";
 import { patronTypeLabels, roleLabels } from "@/config/catalog";
 import {
   changeUserRoleAction,
+  resetUserPasswordAction,
   setUserActiveAction,
 } from "@/features/users/actions";
 import { Role, type PatronType } from "@/generated/prisma/enums";
@@ -87,7 +89,10 @@ export function UserRow({
       </Td>
       <Td className="text-right">
         {canManage ? (
-          <ActiveForm userId={user.id} active={user.active} disabled={isSelf} />
+          <div className="flex flex-col items-end gap-2">
+            <ActiveForm userId={user.id} active={user.active} disabled={isSelf} />
+            {!isSelf && user.active ? <ResetPasswordForm userId={user.id} /> : null}
+          </div>
         ) : (
           <Badge variant={user.active ? "green" : "neutral"} size="sm">
             {user.active ? "Ativa" : "Desativada"}
@@ -169,6 +174,71 @@ function ActiveForm({
           {state.error}
         </p>
       ) : null}
+    </form>
+  );
+}
+
+/**
+ * Senha temporária gerada pela administração. Aparece uma única vez: não fica
+ * gravada em lugar nenhum além do hash, e some ao recarregar a página.
+ */
+function ResetPasswordForm({ userId }: { userId: string }) {
+  const [confirming, setConfirming] = useState(false);
+  const [state, action, pending] = useActionState<
+    ActionResult<{ temporaryPassword: string }> | null,
+    FormData
+  >(resetUserPasswordAction, null);
+
+  if (state?.ok) {
+    return (
+      <div className="flex max-w-64 flex-col items-end gap-1.5 text-right">
+        <p className="text-[0.75rem] leading-snug text-ink-600">Senha temporária:</p>
+        <div className="flex items-center gap-2">
+          <code className="whitespace-nowrap bg-neabi-cream-200 px-2 py-1 font-mono text-[0.8125rem] font-semibold text-ink-900">
+            {state.data.temporaryPassword}
+          </code>
+          <CopyButton value={state.data.temporaryPassword} label="Copiar senha" />
+        </div>
+        <p className="text-[0.75rem] leading-snug text-ink-500">
+          Entregue pessoalmente. Ela aparece só agora; a pessoa deve trocá-la em
+          Minha conta → Perfil.
+        </p>
+      </div>
+    );
+  }
+
+  if (!confirming) {
+    return (
+      <Button variant="ghost" size="sm" onClick={() => setConfirming(true)}>
+        Redefinir senha
+      </Button>
+    );
+  }
+
+  return (
+    <form action={action} className="flex max-w-64 flex-col items-end gap-1.5">
+      <input type="hidden" name="userId" value={userId} />
+      <p className="text-right text-[0.75rem] leading-snug text-ink-600">
+        A senha atual deixa de funcionar.
+      </p>
+      {state && !state.ok ? (
+        <p className="text-right text-[0.75rem] leading-snug text-neabi-red-700">
+          {state.error}
+        </p>
+      ) : null}
+      <div className="flex gap-2">
+        <Button type="submit" variant="danger" size="sm" disabled={pending}>
+          {pending ? "…" : "Gerar senha"}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setConfirming(false)}
+          disabled={pending}
+        >
+          Cancelar
+        </Button>
+      </div>
     </form>
   );
 }
