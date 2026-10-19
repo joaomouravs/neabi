@@ -6,6 +6,7 @@ import {
   ContactMessageActions,
   MarkContactMessageRead,
 } from "@/components/admin/contact-message-actions";
+import { MetadataList } from "@/components/layout/primitives";
 import { Badge } from "@/components/ui/badge";
 import { contactStatusLabels, contactStatusTone } from "@/config/catalog";
 import { ContactStatus } from "@/generated/prisma/enums";
@@ -83,44 +84,34 @@ export default async function AdminContactMessagePage({ params }: { params: Para
 
         <div className="flex min-w-0 flex-col gap-6">
           <AdminSection title="Remetente">
-            {/* Empilhado: na coluna lateral não cabe rótulo ao lado do valor, e
-                o e-mail quebraria no meio. */}
-            <dl className="flex flex-col gap-4">
-              <div>
-                <dt className="font-sans text-[0.75rem] font-semibold uppercase tracking-widest text-ink-500">
-                  Nome
-                </dt>
-                <dd className="mt-1 wrap-break-word text-[0.9375rem] text-ink-800">{message.name}</dd>
-              </div>
-              <div>
-                <dt className="font-sans text-[0.75rem] font-semibold uppercase tracking-widest text-ink-500">
-                  E-mail
-                </dt>
-                <dd className="mt-1 text-[0.9375rem] text-ink-800 wrap-anywhere">
-                  <a
-                    href={replyHref}
-                    className="underline decoration-ink-300 underline-offset-4 hover:decoration-neabi-red"
-                  >
-                    {message.email}
-                  </a>
-                </dd>
-              </div>
-              {account ? (
-                <div>
-                  <dt className="font-sans text-[0.75rem] font-semibold uppercase tracking-widest text-ink-500">
-                    Conta
-                  </dt>
-                  <dd className="mt-1 text-[0.9375rem] text-ink-800">
+            <MetadataList
+              stacked
+              items={[
+                { label: "Nome", value: message.name },
+                {
+                  label: "E-mail",
+                  value: (
+                    <a
+                      href={replyHref}
+                      className="underline decoration-ink-300 underline-offset-4 hover:decoration-neabi-red"
+                    >
+                      {message.email}
+                    </a>
+                  ),
+                },
+                {
+                  label: "Conta",
+                  value: account ? (
                     <Link
                       href={`/admin/usuarios?q=${encodeURIComponent(message.email)}`}
                       className="underline decoration-ink-300 underline-offset-4 hover:decoration-neabi-red"
                     >
                       Cadastrada no site
                     </Link>
-                  </dd>
-                </div>
-              ) : null}
-            </dl>
+                  ) : null,
+                },
+              ]}
+            />
           </AdminSection>
 
           {others.length > 0 ? (

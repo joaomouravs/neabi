@@ -120,6 +120,11 @@ test.describe("catálogo público", () => {
     await expect(
       page.getByRole("heading", { name: "Página não encontrada" }),
     ).toBeVisible();
+
+    // Dentro do layout do site: um só `main`, alvo do "Pular para o
+    // conteúdo" — a página de erro não repete marca nem `main` próprios.
+    await expect(page.locator("main")).toHaveCount(1);
+    await expect(page.locator("#conteudo")).toHaveCount(1);
   });
 
   test("acervo inicial não oferece leitura online", async ({ page }) => {

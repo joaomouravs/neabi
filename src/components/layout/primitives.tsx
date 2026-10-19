@@ -301,12 +301,18 @@ export function PageHeader({
  * Campos ausentes não são renderizados — nunca aparece "não informado" onde a
  * catalogação ainda não foi feita.
  */
+/**
+ * `stacked` põe o rótulo acima do valor — para colunas laterais estreitas, onde
+ * a coluna de 10rem do rótulo deixaria um e-mail quebrando no meio.
+ */
 export function MetadataList({
   items,
   className,
+  stacked = false,
 }: {
   items: { label: string; value: ReactNode | null | undefined }[];
   className?: string;
+  stacked?: boolean;
 }) {
   const visible = items.filter(
     (item) => item.value !== null && item.value !== undefined && item.value !== "",
@@ -318,7 +324,10 @@ export function MetadataList({
       {visible.map((item) => (
         <div
           key={item.label}
-          className="grid gap-1 border-b border-border py-3 first:pt-0 last:border-b-0 last:pb-0 sm:grid-cols-[10rem_minmax(0,1fr)] sm:gap-6"
+          className={cn(
+            "grid gap-1 border-b border-border py-3 first:pt-0 last:border-b-0 last:pb-0",
+            !stacked && "sm:grid-cols-[10rem_minmax(0,1fr)] sm:gap-6",
+          )}
         >
           <dt className="font-sans text-[0.75rem] font-semibold uppercase tracking-widest text-ink-500 sm:pt-0.5">
             {item.label}

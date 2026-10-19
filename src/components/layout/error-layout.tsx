@@ -10,6 +10,11 @@ import { Container, NeabiRule } from "./primitives";
  * Mesmo o erro é uma página do produto: fundo institucional, tipografia
  * editorial, grafismo discreto e uma saída óbvia. Nada de tela branca com
  * traço técnico.
+ *
+ * `embedded` é para quando o erro aparece dentro do layout do site — uma obra
+ * inexistente, por exemplo. Ali o cabeçalho e o `<main id="conteudo">` já
+ * existem: repeti-los empilharia duas marcas e aninharia dois `main` com o
+ * mesmo id, quebrando o "Pular para o conteúdo".
  */
 export function ErrorLayout({
   code,
@@ -17,6 +22,7 @@ export function ErrorLayout({
   description,
   reference,
   aside,
+  embedded = false,
   children,
 }: {
   code: string;
@@ -25,11 +31,20 @@ export function ErrorLayout({
   reference?: string;
   /** Conteúdo extra abaixo das ações — a busca, na 404. */
   aside?: ReactNode;
+  embedded?: boolean;
   children: ReactNode;
 }) {
+  const Content = embedded ? "div" : "main";
+
   return (
-    <div className="on-dark relative flex min-h-dvh flex-col overflow-hidden bg-neabi-black text-neabi-cream">
-      <div aria-hidden="true" className="neabi-rule relative h-1.5 w-full" />
+    <div
+      className={
+        embedded
+          ? "on-dark relative flex min-h-[calc(100dvh-var(--header-height))] flex-col overflow-hidden bg-neabi-black text-neabi-cream"
+          : "on-dark relative flex min-h-dvh flex-col overflow-hidden bg-neabi-black text-neabi-cream"
+      }
+    >
+      {embedded ? null : <div aria-hidden="true" className="neabi-rule relative h-1.5 w-full" />}
       <div
         aria-hidden="true"
         className="neabi-pattern pointer-events-none absolute inset-0 text-neabi-cream opacity-[0.045]"
@@ -42,13 +57,15 @@ export function ErrorLayout({
         {code}
       </p>
 
-      <Container className="relative flex h-(--header-height) items-center">
-        <Link href="/" aria-label="Biblioteca NEABI-NI — página inicial">
-          <NeabiMark tone="dark" />
-        </Link>
-      </Container>
+      {embedded ? null : (
+        <Container className="relative flex h-(--header-height) items-center">
+          <Link href="/" aria-label="Biblioteca NEABI-NI — página inicial">
+            <NeabiMark tone="dark" />
+          </Link>
+        </Container>
+      )}
 
-      <main id="conteudo" className="relative flex flex-1 items-center">
+      <Content id={embedded ? undefined : "conteudo"} className="relative flex flex-1 items-center">
         <Container className="py-14 sm:py-20">
           <p className="font-mono text-[0.875rem] tracking-[0.3em] text-neabi-amber">
             Erro {code}
@@ -74,7 +91,7 @@ export function ErrorLayout({
             </p>
           ) : null}
         </Container>
-      </main>
+      </Content>
     </div>
   );
 }
