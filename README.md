@@ -338,19 +338,21 @@ Contas com e-mail e senha (Auth.js, sessão JWT, hash bcrypt). Três papéis:
 | Papel | Pode |
 |---|---|
 | `MEMBER` | Reservar, acompanhar as próprias reservas, editar o perfil |
-| `EDITOR` | Tudo do MEMBER + catalogar obras, exemplares, categorias, arquivos e conduzir reservas |
-| `ADMIN` | Tudo + autorizar consulta digital, excluir obras, alterar papéis e editar configurações |
+| `EDITOR` | Tudo do MEMBER + catalogar obras, exemplares, categorias, arquivos, conduzir reservas e atender as mensagens de contato |
+| `ADMIN` | Tudo + autorizar consulta digital, excluir obras e mensagens, alterar papéis e editar configurações |
 
 As permissões são declaradas em `src/server/permissions/rbac.ts` e verificadas
-**no servidor a cada ação**. O menu nunca é o mecanismo de proteção.
+**no servidor a cada ação**. O menu nunca é o mecanismo de proteção — mas
+também não oferece o que a pessoa não pode abrir: cada item declara a mesma
+permissão que a página exige.
 
 Contas criadas pelo seed (desenvolvimento):
 
 | Papel | E-mail | Senha |
 |---|---|---|
-| ADMIN | `admin@neabi.local` | `neabi-admin-2026` |
-| EDITOR | `editor@neabi.local` | `neabi-editor-2026` |
-| MEMBER | `usuario@neabi.local` | `neabi-usuario-2026` |
+| ADMIN | `admin@neabi.local` | `SEED_ADMIN_PASSWORD` do `.env` |
+| EDITOR | `editor@neabi.local` | `SEED_EDITOR_PASSWORD` do `.env` |
+| MEMBER | `usuario@neabi.local` | `SEED_MEMBER_PASSWORD` do `.env` |
 
 > **Em produção**, defina `SEED_ADMIN_EMAIL` e `SEED_ADMIN_PASSWORD` antes de
 > rodar o seed e troque a senha no primeiro acesso. As contas de exemplo
@@ -410,6 +412,13 @@ versão em texto puro.
 
 Falha de e-mail nunca desfaz a operação: a reserva já está registrada e o banco
 é a fonte de verdade.
+
+As mensagens do formulário de contato **não dependem de e-mail**: ficam no
+banco e são lidas em `/admin/mensagens`, com selo de mensagens novas no menu.
+Abrir uma mensagem a marca como lida; "respondida" e "arquivada" são marcadas
+pela equipe. A resposta sai do e-mail de quem atende — o botão já abre a
+resposta com o assunto preenchido. Excluir é exclusivo da administração e
+serve para atender a pedidos de eliminação de dados.
 
 ## Testes
 
@@ -512,7 +521,8 @@ apenas se parece com um erro de permissão.
 
 `/admin` · `/admin/acervo` · `/admin/acervo/novo` · `/admin/acervo/[id]` ·
 `/admin/exemplares` · `/admin/categorias` · `/admin/reservas` ·
-`/admin/reservas/[id]` · `/admin/usuarios` · `/admin/arquivos` ·
+`/admin/reservas/[id]` · `/admin/mensagens` · `/admin/mensagens/[id]` ·
+`/admin/usuarios` · `/admin/arquivos` ·
 `/admin/analytics` · `/admin/configuracoes`
 
 **Rotas de serviço**
@@ -521,11 +531,13 @@ apenas se parece com um erro de permissão.
 |---|---|
 | `GET /api/arquivos/[...key]` | Entrega de arquivos com verificação de autorização |
 | `POST /api/auth/[...nextauth]` | Auth.js |
-| `POST /api/manutencao/expirar-reservas` | Expira reservas com prazo vencido e devolve os exemplares ao acervo. Exige `Authorization: Bearer $CRON_SECRET` |
+| `GET`/`POST /api/manutencao/expirar-reservas` | Expira reservas com prazo vencido e devolve os exemplares ao acervo. Exige `Authorization: Bearer $CRON_SECRET` |
 
-A rotina de manutenção é para um agendador (cron da hospedagem, GitHub Actions,
-systemd timer). Sem ela, um exemplar reservado por alguém que nunca apareceu
-ficaria indisponível para sempre:
+Sem essa rotina, um exemplar reservado por alguém que nunca apareceu ficaria
+indisponível para sempre. Na Vercel ela é agendada em `vercel.json` (todo dia
+às 09:00 UTC, 06:00 em Nova Iguaçu — antes do atendimento): a Vercel Cron faz
+`GET` e envia o `CRON_SECRET` do projeto no cabeçalho por conta própria. Fora
+da Vercel, qualquer agendador serve:
 
 ```bash
 curl -X POST https://<host>/api/manutencao/expirar-reservas \
