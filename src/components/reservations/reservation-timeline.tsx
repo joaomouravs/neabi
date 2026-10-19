@@ -41,12 +41,12 @@ export function ReservationTimeline({ entries }: { entries: TimelineEntry[] }) {
       {entries.map((entry, index) => (
         <li key={entry.id} className="relative grid grid-cols-[1.5rem_minmax(0,1fr)] gap-3 pb-6 last:pb-0">
           {index < lastIndex ? (
-            <span aria-hidden="true" className="absolute bottom-0 left-[0.6875rem] top-5 w-px bg-border-strong" />
+            <span aria-hidden="true" className="absolute bottom-0 left-2.75 top-5 w-px bg-border-strong" />
           ) : null}
           <span
             aria-hidden="true"
             className={cn(
-              "relative mt-1 flex size-[1.375rem] items-center justify-center border-2 border-background",
+              "relative mt-1 flex size-5.5 items-center justify-center border-2 border-background",
               index === lastIndex ? "ring-2 ring-offset-0" : "",
               index === lastIndex ? "ring-ink-900/15" : "",
               TONE_DOT[reservationStatusTone[entry.newStatus]],
@@ -56,7 +56,7 @@ export function ReservationTimeline({ entries }: { entries: TimelineEntry[] }) {
             <p className="flex flex-wrap items-center gap-x-2 font-sans text-[0.9375rem] font-semibold text-ink-900">
               {reservationStatusLabels[entry.newStatus]}
               {index === lastIndex ? (
-                <span className="eyebrow tracking-[0.1em] text-ink-500">· atual</span>
+                <span className="eyebrow tracking-widest text-ink-500">· atual</span>
               ) : null}
             </p>
             <p className="mt-0.5 text-[0.8125rem] text-ink-500">

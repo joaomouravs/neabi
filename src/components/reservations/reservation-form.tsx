@@ -369,7 +369,7 @@ function ReservationFields({
               {props.availableShifts.map((shift, index) => (
                 <label
                   key={shift}
-                  className="group relative flex min-h-16 cursor-pointer flex-col justify-center border border-ink-900/20 bg-white px-4 py-3 transition-colors hover:border-ink-900/45 has-[:checked]:border-ink-900 has-[:checked]:bg-neabi-cream-100 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-neabi-red-600"
+                  className="group relative flex min-h-16 cursor-pointer flex-col justify-center border border-ink-900/20 bg-white px-4 py-3 transition-colors hover:border-ink-900/45 has-checked:border-ink-900 has-checked:bg-neabi-cream-100 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-neabi-red-600"
                 >
                   <input
                     type="radio"
@@ -387,7 +387,7 @@ function ReservationFields({
                     </span>
                     <span
                       aria-hidden="true"
-                      className="flex size-5 items-center justify-center rounded-full border border-ink-900/30 group-has-[:checked]:border-neabi-red-600 group-has-[:checked]:bg-neabi-red-600"
+                      className="flex size-5 items-center justify-center rounded-full border border-ink-900/30 group-has-checked:border-neabi-red-600 group-has-checked:bg-neabi-red-600"
                     >
                       <span className="size-2 rounded-full bg-white" />
                     </span>

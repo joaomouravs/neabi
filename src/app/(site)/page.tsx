@@ -138,7 +138,7 @@ function Hero() {
         </div>
 
         <div className="hidden min-w-0 md:block">
-          <Suspense fallback={<div className="mx-auto aspect-[6/5] w-full max-w-[36rem]" />}>
+          <Suspense fallback={<div className="mx-auto aspect-6/5 w-full max-w-xl" />}>
             <HeroCovers />
           </Suspense>
         </div>
@@ -149,7 +149,7 @@ function Hero() {
 }
 
 function HeroStatsFallback() {
-  return <div className="mt-10 h-[4.75rem] border-t border-neabi-cream/15 sm:max-w-xl" />;
+  return <div className="mt-10 h-19 border-t border-neabi-cream/15 sm:max-w-xl" />;
 }
 
 async function HeroStats() {
@@ -737,7 +737,7 @@ async function AboutSection() {
     >
       <div
         aria-hidden="true"
-        className="neabi-pattern-lines pointer-events-none absolute inset-y-0 left-0 hidden w-1/3 text-ink-900 opacity-[0.04] [mask-image:linear-gradient(to_right,black,transparent)] lg:block"
+        className="neabi-pattern-lines pointer-events-none absolute inset-y-0 left-0 hidden w-1/3 text-ink-900 opacity-[0.04] mask-[linear-gradient(to_right,black,transparent)] lg:block"
       />
       <Container className="relative grid gap-12 lg:grid-cols-12 lg:gap-10">
         <div className="lg:col-span-7 lg:pr-8">

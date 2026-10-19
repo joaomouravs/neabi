@@ -74,7 +74,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         aria-live="polite"
         aria-label="Notificações"
         role="region"
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-[90] flex flex-col items-center gap-2 p-4 sm:items-end sm:p-6"
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-90 flex flex-col items-center gap-2 p-4 sm:items-end sm:p-6"
       >
         <AnimatePresence initial={false}>
           {toasts.map((toast) => {
@@ -93,7 +93,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 <Icon
                   aria-hidden="true"
                   className={cn(
-                    "mt-0.5 size-[1.125rem] shrink-0",
+                    "mt-0.5 size-4.5 shrink-0",
                     toast.tone === "success" && "text-neabi-green-200",
                     toast.tone === "info" && "text-neabi-amber",
                     toast.tone === "danger" && "text-neabi-red-200",

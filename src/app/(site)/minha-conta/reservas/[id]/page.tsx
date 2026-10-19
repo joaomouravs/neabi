@@ -164,7 +164,7 @@ export default async function ReservationDetailPage({ params }: { params: Params
 function Quick({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div>
-      <dt className="eyebrow tracking-[0.1em] text-ink-500">{label}</dt>
+      <dt className="eyebrow tracking-widest text-ink-500">{label}</dt>
       <dd className="mt-1 font-medium text-ink-900">{value}</dd>
     </div>
   );

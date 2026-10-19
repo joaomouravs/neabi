@@ -104,7 +104,7 @@ export default async function AboutPage() {
             </div>
           </div>
 
-          <div className="max-w-[42rem] lg:col-span-8 lg:col-start-5">
+          <div className="max-w-2xl lg:col-span-8 lg:col-start-5">
             <div className="space-y-5 text-pretty text-lede text-ink-800">
               <p>
                 Os Núcleos de Estudos Afro-Brasileiros e Indígenas existem nas
@@ -148,7 +148,7 @@ export default async function AboutPage() {
       >
         <div
           aria-hidden="true"
-          className="neabi-pattern-lines pointer-events-none absolute inset-y-0 right-0 w-1/2 text-ink-900 opacity-[0.04] [mask-image:linear-gradient(to_left,black,transparent)]"
+          className="neabi-pattern-lines pointer-events-none absolute inset-y-0 right-0 w-1/2 text-ink-900 opacity-[0.04] mask-[linear-gradient(to_left,black,transparent)]"
         />
         <Container className="relative grid gap-8 lg:grid-cols-12 lg:gap-12">
           <div className="lg:col-span-3">

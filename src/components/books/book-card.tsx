@@ -59,7 +59,7 @@ export function BookCard({
         "transition-[transform,box-shadow,border-color] duration-200 ease-editorial",
         // `hover:` só existe em dispositivos com ponteiro: no toque, nada
         // depende dele.
-        "hover:-translate-y-[3px] hover:border-border-strong hover:shadow-lift motion-reduce:hover:translate-y-0",
+        "hover:translate-y-[-3px] hover:border-border-strong hover:shadow-lift motion-reduce:hover:translate-y-0",
         // O foco do link aparece no cartão inteiro, não só em volta do título.
         "has-[a:focus-visible]:outline-3 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-neabi-red-600",
         layout === "vertical" && "flex-col",
@@ -72,8 +72,8 @@ export function BookCard({
         className={cn(
           "relative shrink-0 overflow-hidden",
           layout === "vertical" && "w-full",
-          layout === "horizontal" && "w-[5.5rem] self-start sm:w-24",
-          layout === "responsive" && "w-[5.5rem] self-start min-[480px]:w-full",
+          layout === "horizontal" && "w-22 self-start sm:w-24",
+          layout === "responsive" && "w-22 self-start min-[480px]:w-full",
         )}
       >
         <BookCover

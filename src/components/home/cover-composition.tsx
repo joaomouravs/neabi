@@ -46,12 +46,12 @@ export function CoverComposition({
   const front = shown[0];
 
   return (
-    <figure className={cn("relative mx-auto w-full max-w-[36rem]", className)}>
-      <div aria-hidden="true" className="relative aspect-[6/5] w-full">
+    <figure className={cn("relative mx-auto w-full max-w-xl", className)}>
+      <div aria-hidden="true" className="relative aspect-6/5 w-full">
         {/* Moldura e grafismo por trás das capas. */}
         <div className="absolute left-[10%] top-[9%] h-[74%] w-[80%] border border-neabi-cream/12" />
         <div className="neabi-pattern-diamonds absolute left-[58%] top-[58%] h-[30%] w-[34%] text-neabi-cream opacity-[0.06]" />
-        <div className="absolute left-[29.5%] top-[3%] h-[34%] w-[3px] [background-image:linear-gradient(to_bottom,var(--neabi-red)_0_33.33%,var(--neabi-amber)_33.33%_66.66%,var(--neabi-green)_66.66%_100%)]" />
+        <div className="absolute left-[29.5%] top-[3%] h-[34%] w-[3px] bg-[linear-gradient(to_bottom,var(--neabi-red)_0_33.33%,var(--neabi-amber)_33.33%_66.66%,var(--neabi-green)_66.66%_100%)]" />
 
         {shown.map((book, index) => (
           <div
@@ -78,7 +78,7 @@ export function CoverComposition({
         ))}
       </div>
 
-      <figcaption className="relative -mt-[9%] ml-[33%] max-w-[62%]">
+      <figcaption className="relative mt-[-9%] ml-[33%] max-w-[62%]">
         <p className="eyebrow text-neabi-amber">Em destaque no acervo</p>
         <Link
           href={`/acervo/${front.slug}`}

@@ -140,7 +140,7 @@ export function SettingsForm({ defaults }: { defaults: SettingsFormDefaults }) {
                   name="serviceDays"
                   value={value}
                   defaultChecked={defaults.serviceDays.includes(Number(value))}
-                  className="size-4 cursor-pointer accent-[var(--neabi-red)]"
+                  className="size-4 cursor-pointer accent-(--neabi-red)"
                 />
                 {label}
               </label>
@@ -167,7 +167,7 @@ export function SettingsForm({ defaults }: { defaults: SettingsFormDefaults }) {
                   name="availableShifts"
                   value={shift}
                   defaultChecked={defaults.availableShifts.includes(shift)}
-                  className="size-4 cursor-pointer accent-[var(--neabi-red)]"
+                  className="size-4 cursor-pointer accent-(--neabi-red)"
                 />
                 {shiftLabels[shift]}
               </label>

@@ -68,7 +68,7 @@ export function MobileFilterBar({ facets }: { facets: FilterFacets }) {
   const { activeCount } = useCatalogUrl();
 
   return (
-    <div className="sticky top-[var(--header-height-compact)] z-30 -mx-5 border-b border-border bg-background px-5 py-3 md:-mx-8 md:px-8 lg:hidden">
+    <div className="sticky top-(--header-height-compact) z-30 -mx-5 border-b border-border bg-background px-5 py-3 md:-mx-8 md:px-8 lg:hidden">
       <div className="grid grid-cols-2 gap-2">
         <BottomSheet
           title="Filtros"

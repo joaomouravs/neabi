@@ -32,9 +32,9 @@ const buttonVariants = cva(
           "bg-neabi-red-600 text-white hover:bg-neabi-red-700 active:bg-neabi-red-900",
         dark: "bg-neabi-black text-neabi-cream hover:bg-ink-700 active:bg-ink-800",
         outline:
-          "border border-ink-900/25 bg-transparent text-ink-900 hover:border-ink-900 hover:bg-ink-900/[0.04] active:bg-ink-900/[0.08]",
+          "border border-ink-900/25 bg-transparent text-ink-900 hover:border-ink-900 hover:bg-ink-900/4 active:bg-ink-900/8",
         ghost:
-          "bg-transparent text-ink-700 hover:bg-ink-900/[0.06] hover:text-ink-900 active:bg-ink-900/[0.1]",
+          "bg-transparent text-ink-700 hover:bg-ink-900/6 hover:text-ink-900 active:bg-ink-900/10",
         subtle:
           "bg-neabi-cream-200/70 text-ink-800 hover:bg-neabi-cream-300/70 active:bg-neabi-cream-300",
         success:

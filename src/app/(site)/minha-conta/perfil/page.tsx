@@ -66,11 +66,11 @@ export default async function ProfilePage() {
       <ProfileSection id="conta-titulo" title="Conta">
         <dl className="grid gap-5 text-[0.9375rem] sm:grid-cols-2">
           <div>
-            <dt className="eyebrow tracking-[0.1em] text-ink-500">Perfil de acesso</dt>
+            <dt className="eyebrow tracking-widest text-ink-500">Perfil de acesso</dt>
             <dd className="mt-1 text-ink-800">{roleLabels[user.role]}</dd>
           </div>
           <div>
-            <dt className="eyebrow tracking-[0.1em] text-ink-500">Conta criada em</dt>
+            <dt className="eyebrow tracking-widest text-ink-500">Conta criada em</dt>
             <dd className="mt-1 text-ink-800">
               {new Intl.DateTimeFormat("pt-BR", {
                 dateStyle: "long",

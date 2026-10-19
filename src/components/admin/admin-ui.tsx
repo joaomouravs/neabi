@@ -32,7 +32,7 @@ export function AdminPage({
   children: ReactNode;
 }) {
   return (
-    <div className="mx-auto w-full max-w-[90rem] px-5 pb-16 pt-6 sm:px-8 sm:pt-8 lg:px-10">
+    <div className="mx-auto w-full max-w-360 px-5 pb-16 pt-6 sm:px-8 sm:pt-8 lg:px-10">
       {breadcrumb ? (
         <nav aria-label="Trilha de navegação" className="mb-3">
           <Link
@@ -51,7 +51,7 @@ export function AdminPage({
       <header className="flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0 max-w-3xl">
           {eyebrow ? <p className="eyebrow mb-1.5 text-neabi-red-600">{eyebrow}</p> : null}
-          <h1 className="break-words font-display text-[clamp(1.875rem,3vw,2.5rem)] font-bold leading-tight text-ink-900">
+          <h1 className="wrap-break-word font-display text-[clamp(1.875rem,3vw,2.5rem)] font-bold leading-tight text-ink-900">
             {title}
           </h1>
           {description ? (
@@ -193,7 +193,7 @@ export function AdminTable({
     // `Th` — escapa do recorte de `overflow-x-auto` e alarga a rolagem
     // horizontal da página inteira.
     <div className="relative overflow-x-auto border border-border bg-surface">
-      <table className="w-full min-w-[42rem] border-collapse text-left">
+      <table className="w-full min-w-2xl border-collapse text-left">
         {caption ? <caption className="sr-only">{caption}</caption> : null}
         <thead>
           <tr className="border-b border-border-strong bg-surface-muted">{head}</tr>

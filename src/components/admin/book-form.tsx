@@ -294,7 +294,7 @@ export function BookForm({
                   name="categoryIds"
                   value={category.id}
                   defaultChecked={defaults.categoryIds.includes(category.id)}
-                  className="size-4 cursor-pointer accent-[var(--neabi-red)]"
+                  className="size-4 cursor-pointer accent-(--neabi-red)"
                 />
                 {category.name}
               </label>

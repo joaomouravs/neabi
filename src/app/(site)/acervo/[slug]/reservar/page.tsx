@@ -77,7 +77,7 @@ export default async function ReservePage({ params }: { params: Params }) {
     >
       <div aria-hidden="true" className="neabi-rule h-1 w-full" />
       <div className="flex gap-4 p-4 sm:p-5 lg:flex-col lg:gap-5">
-        <div className="w-[4.5rem] shrink-0 sm:w-20 lg:w-32">
+        <div className="w-18 shrink-0 sm:w-20 lg:w-32">
           <BookCover
             title={book.title}
             coverImage={book.coverImage}

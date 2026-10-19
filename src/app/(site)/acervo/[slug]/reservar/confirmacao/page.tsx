@@ -208,7 +208,7 @@ export default async function ReservationConfirmationPage({
 function Detail({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="min-w-0">
-      <dt className="font-sans text-[0.75rem] font-semibold uppercase tracking-[0.1em] text-ink-500">
+      <dt className="font-sans text-[0.75rem] font-semibold uppercase tracking-widest text-ink-500">
         {label}
       </dt>
       <dd className="mt-1 text-[0.9375rem] leading-snug text-ink-800">{value}</dd>

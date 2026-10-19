@@ -51,7 +51,7 @@ export function BookCoverPlaceholder({
       <div
         className={cn(
           "h-[max(3px,1.4cqw)] w-full shrink-0",
-          "[background-image:linear-gradient(to_right,var(--neabi-red)_0_33.33%,var(--neabi-amber)_33.33%_66.66%,var(--neabi-green)_66.66%_100%)]",
+          "bg-[linear-gradient(to_right,var(--neabi-red)_0_33.33%,var(--neabi-amber)_33.33%_66.66%,var(--neabi-green)_66.66%_100%)]",
         )}
       />
 

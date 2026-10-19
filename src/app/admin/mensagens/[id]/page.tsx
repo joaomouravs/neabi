@@ -65,7 +65,7 @@ export default async function AdminContactMessagePage({ params }: { params: Para
           <AdminSection title="Mensagem">
             {/* Texto livre de quem escreveu: quebras de linha preservadas,
                 palavras longas (URLs) quebradas para não alargar a página. */}
-            <p className="max-w-prose whitespace-pre-line break-words text-[0.9375rem] leading-relaxed text-ink-800">
+            <p className="max-w-prose whitespace-pre-line wrap-break-word text-[0.9375rem] leading-relaxed text-ink-800">
               {message.message}
             </p>
           </AdminSection>
@@ -87,16 +87,16 @@ export default async function AdminContactMessagePage({ params }: { params: Para
                 o e-mail quebraria no meio. */}
             <dl className="flex flex-col gap-4">
               <div>
-                <dt className="font-sans text-[0.75rem] font-semibold uppercase tracking-[0.1em] text-ink-500">
+                <dt className="font-sans text-[0.75rem] font-semibold uppercase tracking-widest text-ink-500">
                   Nome
                 </dt>
-                <dd className="mt-1 break-words text-[0.9375rem] text-ink-800">{message.name}</dd>
+                <dd className="mt-1 wrap-break-word text-[0.9375rem] text-ink-800">{message.name}</dd>
               </div>
               <div>
-                <dt className="font-sans text-[0.75rem] font-semibold uppercase tracking-[0.1em] text-ink-500">
+                <dt className="font-sans text-[0.75rem] font-semibold uppercase tracking-widest text-ink-500">
                   E-mail
                 </dt>
-                <dd className="mt-1 text-[0.9375rem] text-ink-800 [overflow-wrap:anywhere]">
+                <dd className="mt-1 text-[0.9375rem] text-ink-800 wrap-anywhere">
                   <a
                     href={replyHref}
                     className="underline decoration-ink-300 underline-offset-4 hover:decoration-neabi-red"
@@ -107,7 +107,7 @@ export default async function AdminContactMessagePage({ params }: { params: Para
               </div>
               {account ? (
                 <div>
-                  <dt className="font-sans text-[0.75rem] font-semibold uppercase tracking-[0.1em] text-ink-500">
+                  <dt className="font-sans text-[0.75rem] font-semibold uppercase tracking-widest text-ink-500">
                     Conta
                   </dt>
                   <dd className="mt-1 text-[0.9375rem] text-ink-800">

@@ -37,12 +37,12 @@ export function ErrorLayout({
       {/* O código gigante é grafismo: o título abaixo já comunica o erro. */}
       <p
         aria-hidden="true"
-        className="pointer-events-none absolute -right-6 bottom-0 select-none font-display text-[clamp(10rem,32vw,26rem)] font-bold leading-[0.75] text-neabi-cream/[0.04]"
+        className="pointer-events-none absolute -right-6 bottom-0 select-none font-display text-[clamp(10rem,32vw,26rem)] font-bold leading-[0.75] text-neabi-cream/4"
       >
         {code}
       </p>
 
-      <Container className="relative flex h-[var(--header-height)] items-center">
+      <Container className="relative flex h-(--header-height) items-center">
         <Link href="/" aria-label="Biblioteca NEABI-NI — página inicial">
           <NeabiMark tone="dark" />
         </Link>

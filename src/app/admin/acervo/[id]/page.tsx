@@ -131,7 +131,7 @@ export default async function EditBookPage({ params }: { params: Params }) {
     >
       {/*
         `grid-cols-1` não é decorativo: sem ele a coluna implícita do celular é
-        dimensionada pelo conteúdo, e a tabela de exemplares (`min-w-[42rem]`)
+        dimensionada pelo conteúdo, e a tabela de exemplares (`min-w-2xl`)
         estica a coluna inteira — a página passa a rolar para o lado em vez de a
         tabela rolar dentro do próprio contêiner.
       */}

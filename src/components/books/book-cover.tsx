@@ -30,7 +30,7 @@ export function BookCover({
   priority = false,
   sizes = "(min-width: 1280px) 280px, (min-width: 768px) 30vw, (min-width: 480px) 45vw, 96px",
   className,
-  ratio = "aspect-[3/4]",
+  ratio = "aspect-3/4",
   fit = "cover",
   tone = "red",
   categoryName,

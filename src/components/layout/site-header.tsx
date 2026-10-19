@@ -132,7 +132,7 @@ export function SiteHeader({ user }: { user: HeaderUser | null }) {
       <Container
         className={cn(
           "grid grid-cols-[auto_1fr_auto] items-center gap-4 transition-[height] duration-200 ease-editorial",
-          compact ? "h-[var(--header-height-compact)]" : "h-[var(--header-height)]",
+          compact ? "h-(--header-height-compact)" : "h-(--header-height)",
         )}
       >
         <Link
@@ -215,14 +215,14 @@ export function SiteHeader({ user }: { user: HeaderUser | null }) {
                   {/* No Radix, o bloqueio de rolagem da página vive no Overlay:
                       sem ele, a roda do mouse sobre o menu rola o conteúdo de
                       trás. */}
-                  <Dialog.Overlay className="fixed inset-0 z-[59] bg-neabi-black lg:hidden" />
+                  <Dialog.Overlay className="fixed inset-0 z-59 bg-neabi-black lg:hidden" />
                   <Dialog.Content asChild aria-describedby={undefined}>
                     <motion.div
                       initial={{ opacity: 0, y: reducedMotion ? 0 : -8 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: reducedMotion ? 0 : -8 }}
                       transition={{ duration, ease: EASE }}
-                      className="on-dark fixed inset-0 z-[60] flex flex-col overflow-y-auto bg-neabi-black text-neabi-cream lg:hidden"
+                      className="on-dark fixed inset-0 z-60 flex flex-col overflow-y-auto bg-neabi-black text-neabi-cream lg:hidden"
                     >
                       <MobileMenu
                         user={user}
@@ -250,7 +250,7 @@ export function SiteHeader({ user }: { user: HeaderUser | null }) {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration }}
-                  className="fixed inset-0 z-[60] bg-neabi-black/50"
+                  className="fixed inset-0 z-60 bg-neabi-black/50"
                 />
               </Dialog.Overlay>
               <Dialog.Content
@@ -266,7 +266,7 @@ export function SiteHeader({ user }: { user: HeaderUser | null }) {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: reducedMotion ? 0 : -12 }}
                   transition={{ duration, ease: EASE }}
-                  className="fixed inset-x-0 top-0 z-[61] max-h-dvh min-h-dvh overflow-y-auto bg-background shadow-overlay md:min-h-0"
+                  className="fixed inset-x-0 top-0 z-61 max-h-dvh min-h-dvh overflow-y-auto bg-background shadow-overlay md:min-h-0"
                 >
                   <div aria-hidden="true" className="neabi-rule h-1 w-full" />
                   <Container className="py-5 md:py-10">
@@ -318,7 +318,7 @@ function firstName(user: HeaderUser): string {
 function AccountMenu({ user, onLogout }: { user: HeaderUser; onLogout: () => void }) {
   const initial = (user.name?.trim() || user.email).charAt(0).toUpperCase();
   const itemClass =
-    "flex min-h-10 cursor-pointer select-none items-center gap-3 px-3 font-sans text-[0.9375rem] text-ink-800 outline-none transition-colors data-[highlighted]:bg-surface-muted data-[highlighted]:text-ink-900";
+    "flex min-h-10 cursor-pointer select-none items-center gap-3 px-3 font-sans text-[0.9375rem] text-ink-800 outline-none transition-colors data-highlighted:bg-surface-muted data-highlighted:text-ink-900";
 
   return (
     <DropdownMenu.Root modal={false}>
@@ -333,7 +333,7 @@ function AccountMenu({ user, onLogout }: { user: HeaderUser; onLogout: () => voi
           >
             {initial}
           </span>
-          <span className="hidden max-w-[8rem] truncate font-sans text-[0.875rem] font-medium xl:block">
+          <span className="hidden max-w-32 truncate font-sans text-[0.875rem] font-medium xl:block">
             {firstName(user)}
           </span>
           <ChevronDown
@@ -347,7 +347,7 @@ function AccountMenu({ user, onLogout }: { user: HeaderUser; onLogout: () => voi
         <DropdownMenu.Content
           align="end"
           sideOffset={10}
-          className="z-[70] w-64 border border-border bg-surface p-1.5 shadow-overlay motion-safe:data-[state=open]:animate-fade-up"
+          className="z-70 w-64 border border-border bg-surface p-1.5 shadow-overlay motion-safe:data-[state=open]:animate-fade-up"
         >
           <div className="mb-1 border-b border-border px-3 pb-3 pt-2">
             <p className="truncate font-sans text-[0.9375rem] font-semibold text-ink-900">
@@ -418,7 +418,7 @@ function MobileMenu({
         aria-hidden="true"
         className="neabi-pattern pointer-events-none absolute inset-0 text-neabi-cream opacity-[0.04]"
       />
-      <Container className="relative flex h-[var(--header-height)] shrink-0 items-center justify-between">
+      <Container className="relative flex h-(--header-height) shrink-0 items-center justify-between">
         <Link href="/" onClick={onClose} aria-label="Biblioteca NEABI-NI — página inicial">
           <NeabiMark tone="dark" />
         </Link>
@@ -444,7 +444,7 @@ function MobileMenu({
                   href={item.href}
                   aria-current={isActive(item.href) ? "page" : undefined}
                   onClick={onClose}
-                  className="group flex min-h-[4.25rem] items-center gap-4 py-2"
+                  className="group flex min-h-17 items-center gap-4 py-2"
                 >
                   <span
                     aria-hidden="true"

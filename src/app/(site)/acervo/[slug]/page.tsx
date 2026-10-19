@@ -151,7 +151,7 @@ export default async function BookPage({ params }: { params: Params }) {
           {/* Capa */}
           <div className="pb-8 [grid-area:cover] lg:pb-10">
             <div className="xl:sticky xl:top-[calc(var(--header-height-compact)+1.5rem)]">
-              <div className="mx-auto w-full max-w-[13.5rem] sm:max-w-[15rem] lg:max-w-none">
+              <div className="mx-auto w-full max-w-54 sm:max-w-60 lg:max-w-none">
                 <BookCover
                   title={book.title}
                   coverImage={book.coverImage}
@@ -180,7 +180,7 @@ export default async function BookPage({ params }: { params: Params }) {
           {/* Identificação */}
           <header className="min-w-0 pb-8 [grid-area:head] lg:pb-10">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="eyebrow inline-flex min-h-8 items-center border border-ink-900/20 px-2.5 tracking-[0.1em] text-ink-700">
+              <span className="eyebrow inline-flex min-h-8 items-center border border-ink-900/20 px-2.5 tracking-widest text-ink-700">
                 {materialTypeLabels[book.materialType]}
               </span>
               {book.categories.map(({ category }, index) => (
@@ -190,7 +190,7 @@ export default async function BookPage({ params }: { params: Params }) {
                   // No celular, só o eixo principal: os demais aparecem em
                   // "Assuntos" e não empurram o título para baixo.
                   className={cn(
-                    "eyebrow min-h-8 items-center gap-2 bg-neabi-cream-200/80 px-2.5 tracking-[0.1em] text-ink-700 transition-colors hover:bg-neabi-cream-300 hover:text-ink-900",
+                    "eyebrow min-h-8 items-center gap-2 bg-neabi-cream-200/80 px-2.5 tracking-widest text-ink-700 transition-colors hover:bg-neabi-cream-300 hover:text-ink-900",
                     index === 0 ? "inline-flex" : "hidden sm:inline-flex",
                   )}
                 >

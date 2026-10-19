@@ -199,7 +199,7 @@ function InfoRow({
         <Icon className="size-4" />
       </span>
       <div className="min-w-0">
-        <p className="eyebrow tracking-[0.1em] text-ink-500">{label}</p>
+        <p className="eyebrow tracking-widest text-ink-500">{label}</p>
         <p className="mt-1 text-[0.9375rem] leading-relaxed text-ink-900">{children}</p>
       </div>
     </li>

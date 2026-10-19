@@ -47,7 +47,7 @@ export function LegalPage({
             </div>
           </nav>
 
-          <div className="max-w-[44rem]">
+          <div className="max-w-176">
             {sections.map((section) => (
               <section
                 key={section.id}

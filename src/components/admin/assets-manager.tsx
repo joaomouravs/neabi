@@ -274,7 +274,7 @@ function AuthorizeForm({ asset }: { asset: AssetRecord }) {
           type="checkbox"
           name="authorized"
           defaultChecked={asset.authorized}
-          className="size-4 accent-[var(--neabi-red)]"
+          className="size-4 accent-(--neabi-red)"
         />
         Autorizar consulta digital desta obra no site
       </label>
@@ -284,7 +284,7 @@ function AuthorizeForm({ asset }: { asset: AssetRecord }) {
           type="checkbox"
           name="downloadAllowed"
           defaultChecked={asset.downloadAllowed}
-          className="size-4 accent-[var(--neabi-red)]"
+          className="size-4 accent-(--neabi-red)"
         />
         Permitir download do arquivo
       </label>

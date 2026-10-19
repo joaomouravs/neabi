@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 export function BookCardSkeleton() {
   return (
     <div className="flex h-full flex-row border border-border bg-surface min-[480px]:flex-col">
-      <Skeleton className="aspect-[3/4] w-[5.5rem] shrink-0 self-start min-[480px]:w-full" />
+      <Skeleton className="aspect-3/4 w-22 shrink-0 self-start min-[480px]:w-full" />
       <div className="flex flex-1 flex-col gap-2.5 px-4 py-3.5 min-[480px]:p-4 lg:p-5">
         <Skeleton className="h-2.5 w-20" />
         <Skeleton className="h-4 w-full" />
@@ -54,7 +54,7 @@ export function BookDetailsSkeleton() {
       </Container>
       <Container className="section-y-sm">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,17rem)_minmax(0,1fr)_20rem] lg:gap-12">
-          <Skeleton className="mx-auto aspect-[3/4] w-full max-w-[15rem] lg:max-w-none" />
+          <Skeleton className="mx-auto aspect-3/4 w-full max-w-60 lg:max-w-none" />
           <div className="flex flex-col gap-4">
             <Skeleton className="h-3 w-40" />
             <Skeleton className="h-10 w-full" />
@@ -111,7 +111,7 @@ export function AccountReservationsSkeleton({
     <LoadingRegion label="Carregando suas reservas…" className={cn("flex flex-col gap-3", className)}>
       {Array.from({ length: rows }, (_, index) => (
         <div key={index} className="flex gap-4 border border-border bg-surface p-4 sm:p-5">
-          <Skeleton className="aspect-[3/4] w-16 shrink-0 sm:w-20" />
+          <Skeleton className="aspect-3/4 w-16 shrink-0 sm:w-20" />
           <div className="flex flex-1 flex-col gap-2.5">
             <Skeleton className="h-3 w-40" />
             <Skeleton className="h-5 w-3/4" />

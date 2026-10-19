@@ -295,7 +295,7 @@ export function SearchCombobox({
             hero ? "w-10 sm:w-12" : "w-11",
           )}
         >
-          <Search className={hero ? "size-5" : "size-[1.125rem]"} />
+          <Search className={hero ? "size-5" : "size-4.5"} />
         </span>
 
         <input

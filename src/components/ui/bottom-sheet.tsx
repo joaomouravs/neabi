@@ -50,7 +50,7 @@ export function BottomSheet({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration }}
-                className="fixed inset-0 z-[60] bg-neabi-black/55"
+                className="fixed inset-0 z-60 bg-neabi-black/55"
               />
             </Dialog.Overlay>
             {/* Sem descrição, `aria-describedby` indefinido evita o aviso do Radix. */}
@@ -60,7 +60,7 @@ export function BottomSheet({
                 animate={reducedMotion ? { opacity: 1 } : { y: 0 }}
                 exit={reducedMotion ? { opacity: 0 } : { y: "100%" }}
                 transition={{ duration, ease: [0.2, 0.7, 0.2, 1] }}
-                className="fixed inset-x-0 bottom-0 z-[61] flex max-h-[88dvh] flex-col bg-background shadow-overlay"
+                className="fixed inset-x-0 bottom-0 z-61 flex max-h-[88dvh] flex-col bg-background shadow-overlay"
               >
                 <div aria-hidden="true" className="neabi-rule h-1 w-full shrink-0" />
                 <div className="flex shrink-0 items-center justify-between gap-4 border-b border-border px-5 py-3">

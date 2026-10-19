@@ -145,7 +145,7 @@ const controlBase = [
   "hover:border-ink-900/40",
   "focus:border-ink-900 focus-visible:outline-2 focus-visible:outline-offset-2",
   "disabled:cursor-not-allowed disabled:bg-neabi-cream-100 disabled:text-ink-500",
-  "aria-[invalid=true]:border-neabi-red-600 aria-[invalid=true]:bg-neabi-red-050/40",
+  "aria-invalid:border-neabi-red-600 aria-invalid:bg-neabi-red-050/40",
 ].join(" ");
 
 export function Input({ className, ...props }: ComponentProps<"input">) {
@@ -179,9 +179,9 @@ export function PasswordInput({ className, ...props }: ComponentProps<"input">) 
         className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-ink-500 transition-colors hover:text-ink-900 focus-visible:outline-offset-[-3px]"
       >
         {visible ? (
-          <EyeOff aria-hidden="true" className="size-[1.125rem]" />
+          <EyeOff aria-hidden="true" className="size-4.5" />
         ) : (
-          <Eye aria-hidden="true" className="size-[1.125rem]" />
+          <Eye aria-hidden="true" className="size-4.5" />
         )}
         <span className="sr-only">{visible ? "Ocultar senha" : "Mostrar senha"}</span>
       </button>
@@ -207,7 +207,7 @@ export function Select({ className, children, ...props }: ComponentProps<"select
       {...controlProps}
       className={cn(
         controlBase,
-        "cursor-pointer appearance-none bg-[length:11px] bg-[right_0.95rem_center] bg-no-repeat pr-10",
+        "cursor-pointer appearance-none bg-size-[11px] bg-position-[right_0.95rem_center] bg-no-repeat pr-10",
         "bg-[image:url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 11 7\"><path d=\"M1 1l4.5 4.5L10 1\" fill=\"none\" stroke=\"%234D4842\" stroke-width=\"1.6\"/></svg>')]",
         className,
       )}
@@ -242,9 +242,9 @@ export function CheckboxField({
           className={cn(
             "mt-0.5 size-5 shrink-0 cursor-pointer appearance-none border border-ink-900/35 bg-white transition-colors",
             "checked:border-neabi-red-600 checked:bg-neabi-red-600",
-            "checked:bg-[length:12px] checked:bg-center checked:bg-no-repeat",
+            "checked:bg-size-[12px] checked:bg-center checked:bg-no-repeat",
             "checked:bg-[image:url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 12 10\"><path d=\"M1 5l3.2 3.2L11 1.4\" fill=\"none\" stroke=\"white\" stroke-width=\"2\"/></svg>')]",
-            "aria-[invalid=true]:border-neabi-red-600",
+            "aria-invalid:border-neabi-red-600",
             "disabled:cursor-not-allowed disabled:opacity-50",
           )}
           {...props}

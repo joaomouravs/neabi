@@ -176,7 +176,7 @@ export function Alert({
       className={cn(alertVariants({ variant }), className)}
       {...props}
     >
-      <Icon aria-hidden="true" className="mt-0.5 size-[1.125rem] shrink-0" strokeWidth={2} />
+      <Icon aria-hidden="true" className="mt-0.5 size-4.5 shrink-0" strokeWidth={2} />
       <div className="min-w-0">
         {title ? <p className="mb-0.5 font-semibold">{title}</p> : null}
         {children}

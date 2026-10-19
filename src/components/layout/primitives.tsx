@@ -30,10 +30,10 @@ export function Container({
     <Component
       className={cn(
         "mx-auto w-full px-5 md:px-8",
-        size === "prose" && "max-w-[46rem]",
+        size === "prose" && "max-w-184",
         size === "narrow" && "max-w-4xl",
-        size === "default" && "max-w-[80rem]",
-        size === "wide" && "max-w-[90rem]",
+        size === "default" && "max-w-7xl",
+        size === "wide" && "max-w-360",
         className,
       )}
       {...props}
@@ -256,7 +256,7 @@ export function PageHeader({
       <div
         aria-hidden="true"
         className={cn(
-          "pointer-events-none absolute inset-y-0 right-0 hidden w-1/2 [mask-image:linear-gradient(to_left,black,transparent)] md:block",
+          "pointer-events-none absolute inset-y-0 right-0 hidden w-1/2 mask-[linear-gradient(to_left,black,transparent)] md:block",
           dark
             ? "neabi-pattern text-neabi-cream opacity-[0.06]"
             : "neabi-pattern-lines text-ink-900 opacity-[0.045]",
@@ -320,10 +320,10 @@ export function MetadataList({
           key={item.label}
           className="grid gap-1 border-b border-border py-3 first:pt-0 last:border-b-0 last:pb-0 sm:grid-cols-[10rem_minmax(0,1fr)] sm:gap-6"
         >
-          <dt className="font-sans text-[0.75rem] font-semibold uppercase tracking-[0.1em] text-ink-500 sm:pt-0.5">
+          <dt className="font-sans text-[0.75rem] font-semibold uppercase tracking-widest text-ink-500 sm:pt-0.5">
             {item.label}
           </dt>
-          <dd className="min-w-0 break-words text-[0.9375rem] leading-relaxed text-ink-800">
+          <dd className="min-w-0 wrap-break-word text-[0.9375rem] leading-relaxed text-ink-800">
             {item.value}
           </dd>
         </div>

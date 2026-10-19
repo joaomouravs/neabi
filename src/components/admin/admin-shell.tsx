@@ -143,7 +143,7 @@ export function AdminShell({
     <div className="min-h-dvh bg-background lg:grid lg:grid-cols-[16rem_minmax(0,1fr)]">
       <a
         href="#admin-conteudo"
-        className="sr-only-focusable absolute left-4 top-4 z-[100] bg-neabi-black px-4 py-3 text-sm font-semibold text-neabi-cream"
+        className="sr-only-focusable absolute left-4 top-4 z-100 bg-neabi-black px-4 py-3 text-sm font-semibold text-neabi-cream"
       >
         Pular para o conteúdo
       </a>

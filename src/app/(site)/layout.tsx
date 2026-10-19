@@ -26,7 +26,7 @@ export default async function SiteLayout({ children }: { children: ReactNode }) 
     <div className="flex min-h-dvh flex-col">
       <a
         href="#conteudo"
-        className="sr-only-focusable absolute left-4 top-4 z-[100] bg-neabi-black px-4 py-3 font-sans text-sm font-semibold text-neabi-cream"
+        className="sr-only-focusable absolute left-4 top-4 z-100 bg-neabi-black px-4 py-3 font-sans text-sm font-semibold text-neabi-cream"
       >
         Pular para o conteúdo
       </a>
