@@ -5,7 +5,7 @@ import type { Shift } from "@/generated/prisma/enums";
 import { env } from "@/server/env";
 import { logger } from "@/server/logger";
 
-import { renderReservationEmail } from "./templates";
+import { escapeHtml, renderReservationEmail } from "./templates";
 
 /**
  * Notificações por e-mail.
@@ -90,10 +90,7 @@ class SmtpTransport implements MailTransport {
       // que não pode ser atualizado enquanto o Auth.js exigir a série 8.
       disableFileAccess: true,
       disableUrlAccess: true,
-      auth:
-        config.SMTP_USER && config.SMTP_PASSWORD
-          ? { user: config.SMTP_USER, pass: config.SMTP_PASSWORD }
-          : undefined,
+      auth: smtpAuth(config),
     });
 
     await transporter.sendMail({
@@ -104,6 +101,12 @@ class SmtpTransport implements MailTransport {
       text: message.text,
     });
   }
+}
+
+/** Senha do SMTP: a explícita, ou a chave da integração do Resend. */
+function smtpAuth(config: ReturnType<typeof env>) {
+  const pass = config.SMTP_PASSWORD || config.RESEND_API_KEY;
+  return config.SMTP_USER && pass ? { user: config.SMTP_USER, pass } : undefined;
 }
 
 let transport: MailTransport | null = null;
@@ -121,6 +124,36 @@ function getTransport(): MailTransport {
  */
 export function emailDeliveryEnabled(): boolean {
   return env().MAIL_DRIVER === "smtp";
+}
+
+/** Como o e-mail está configurado — o que a tela de configurações mostra. */
+export function emailStatus() {
+  const config = env();
+  return {
+    enabled: config.MAIL_DRIVER === "smtp",
+    from: config.MAIL_FROM,
+    host: config.SMTP_HOST ?? null,
+    hasCredentials: Boolean(smtpAuth(config)),
+  };
+}
+
+/**
+ * Envia uma mensagem de teste pelo transporte configurado. Diferente das
+ * notificações, a falha **não** é engolida: o objetivo é justamente mostrar à
+ * equipe o erro real do provedor.
+ */
+export async function sendTestEmail(to: string, libraryName: string): Promise<void> {
+  const text = [
+    `Este é um e-mail de teste da ${libraryName}.`,
+    "",
+    "Se você o recebeu, as notificações de reserva estão saindo por e-mail.",
+  ].join("\n");
+  await getTransport().send({
+    to,
+    subject: `Teste de e-mail — ${libraryName}`,
+    text,
+    html: `<p>Este é um e-mail de teste da <strong>${escapeHtml(libraryName)}</strong>.</p><p>Se você o recebeu, as notificações de reserva estão saindo por e-mail.</p>`,
+  });
 }
 
 /** Permite injetar um transporte falso nos testes. */

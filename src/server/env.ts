@@ -88,6 +88,13 @@ const baseSchema = z.object({
   SMTP_PORT: z.coerce.number().int().positive().optional(),
   SMTP_USER: z.string().trim().optional(),
   SMTP_PASSWORD: z.string().trim().optional(),
+  /**
+   * Injetada pela integração do Resend na Vercel. No SMTP do Resend a senha é
+   * a própria chave da API: sem `SMTP_PASSWORD`, o transporte usa esta — a
+   * chave nunca precisa ser copiada, e uma rotação feita pela integração vale
+   * sozinha.
+   */
+  RESEND_API_KEY: z.string().trim().optional(),
 
   // ---------------------------------------------------------------------------
   // Observabilidade e proteção
@@ -129,6 +136,19 @@ const schema = baseSchema.superRefine((value, ctx) => {
       code: "custom",
       path: ["SMTP_HOST"],
       message: 'MAIL_DRIVER="smtp" exige SMTP_HOST.',
+    });
+  }
+
+  if (
+    value.MAIL_DRIVER === "smtp" &&
+    value.SMTP_USER &&
+    !value.SMTP_PASSWORD &&
+    !value.RESEND_API_KEY
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["SMTP_PASSWORD"],
+      message: "SMTP_USER definido sem SMTP_PASSWORD (nem RESEND_API_KEY da integração).",
     });
   }
 

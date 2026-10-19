@@ -130,6 +130,7 @@ export type AuditEvent =
   | "acervo.capa_removida"
   | "arquivo.falha"
   | "configuracoes.atualizadas"
+  | "configuracoes.email_teste"
   | "contato.status_alterado"
   | "contato.mensagem_removida"
   | "banco.falha";

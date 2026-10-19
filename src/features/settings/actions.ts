@@ -3,15 +3,19 @@
 import { revalidatePath } from "next/cache";
 
 import { Shift } from "@/generated/prisma/enums";
+import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/server/auth/session";
-import { audit } from "@/server/logger";
+import { audit, logger } from "@/server/logger";
 import {
   actionError,
   actionOk,
+  ConflictError,
   ValidationError,
   type ActionResult,
 } from "@/server/errors";
-import { upsertSettings } from "@/server/repositories/settings-repository";
+import { emailStatus, sendTestEmail } from "@/server/notifications";
+import { enforceRateLimit } from "@/server/rate-limit";
+import { getSettings, upsertSettings } from "@/server/repositories/settings-repository";
 import { settingsSchema } from "@/validators/settings";
 
 /**
@@ -87,6 +91,52 @@ export async function updateSettingsAction(
     revalidatePath("/", "layout");
     revalidatePath("/admin/configuracoes");
     return actionOk();
+  } catch (error) {
+    return actionError(error);
+  }
+}
+
+/**
+ * E-mail de teste para a própria conta de quem pede.
+ *
+ * O destinatário nunca vem do formulário: um campo livre transformaria o
+ * painel num canal de envio para qualquer endereço. Quando o provedor recusa,
+ * a mensagem dele volta para a tela — é a informação que a equipe precisa
+ * para corrigir a configuração.
+ */
+export async function sendTestEmailAction(): Promise<ActionResult<{ to: string }>> {
+  try {
+    const actor = await requirePermission("settings:manage");
+
+    if (!emailStatus().enabled) {
+      throw new ConflictError(
+        'O envio de e-mail está desligado (MAIL_DRIVER="console"). Nada sairia.',
+      );
+    }
+
+    enforceRateLimit({
+      action: "email-teste",
+      subject: actor.id,
+      limit: 5,
+      windowMs: 60 * 60 * 1000,
+    });
+
+    const [user, settings] = await Promise.all([
+      prisma.user.findUnique({ where: { id: actor.id }, select: { email: true } }),
+      getSettings(),
+    ]);
+    if (!user?.email) throw new ValidationError("Sua conta não tem e-mail cadastrado.");
+
+    try {
+      await sendTestEmail(user.email, settings.libraryName);
+    } catch (error) {
+      logger.warn("E-mail de teste recusado pelo provedor", { error });
+      const detalhe = error instanceof Error ? error.message : String(error);
+      throw new ConflictError(`O provedor recusou o envio: ${detalhe}`);
+    }
+
+    audit("configuracoes.email_teste", { actorId: actor.id });
+    return actionOk({ to: user.email });
   } catch (error) {
     return actionError(error);
   }

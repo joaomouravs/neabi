@@ -139,6 +139,36 @@ describe("validação do ambiente", () => {
     expect(() => env()).toThrow(/SMTP_HOST/);
   });
 
+  it("recusa usuário SMTP sem senha", async () => {
+    process.env.MAIL_DRIVER = "smtp";
+    process.env.SMTP_HOST = "smtp.resend.com";
+    process.env.SMTP_USER = "resend";
+    const env = await carregar();
+    expect(() => env()).toThrow(/SMTP_PASSWORD/);
+  });
+
+  it("aceita a chave da integração do Resend como senha SMTP", async () => {
+    process.env.MAIL_DRIVER = "smtp";
+    process.env.SMTP_HOST = "smtp.resend.com";
+    process.env.SMTP_USER = "resend";
+    process.env.RESEND_API_KEY = "re_exemplo";
+    const env = await carregar();
+    expect(() => env()).not.toThrow();
+
+    const { emailStatus } = await import("@/server/notifications");
+    expect(emailStatus()).toMatchObject({
+      enabled: true,
+      host: "smtp.resend.com",
+      hasCredentials: true,
+    });
+  });
+
+  it("com o e-mail desligado, o status diz que nada sai", async () => {
+    await carregar();
+    const { emailStatus } = await import("@/server/notifications");
+    expect(emailStatus().enabled).toBe(false);
+  });
+
   it("recusa segredo de desenvolvimento em produção", async () => {
     // `NODE_ENV` é somente-leitura nos tipos do Next; aqui precisamos simular
     // o ambiente de produção sem afrouxar a tipagem do resto do arquivo.

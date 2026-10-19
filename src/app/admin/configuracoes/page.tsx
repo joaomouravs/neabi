@@ -1,6 +1,8 @@
-import { AdminPage } from "@/components/admin/admin-ui";
+import { AdminPage, AdminSection } from "@/components/admin/admin-ui";
+import { EmailSettings } from "@/components/admin/email-settings";
 import { SettingsForm } from "@/components/admin/settings-form";
 import { requirePermission } from "@/server/auth/session";
+import { emailStatus } from "@/server/notifications";
 import { getSettings } from "@/server/repositories/settings-repository";
 
 export default async function AdminSettingsPage() {
@@ -14,7 +16,7 @@ export default async function AdminSettingsPage() {
       title="Configurações"
       description="Dados institucionais e regras de reserva. Estes valores são a única fonte de verdade do sistema — não existem cópias espalhadas pelo código."
     >
-      <div className="max-w-4xl">
+      <div className="flex max-w-4xl flex-col gap-8">
         <SettingsForm
           defaults={{
             libraryName: settings.libraryName,
@@ -33,6 +35,13 @@ export default async function AdminSettingsPage() {
             socialLinks,
           }}
         />
+
+        <AdminSection
+          title="E-mail"
+          description="Notificações de reserva para quem solicitou. Configurado por variáveis de ambiente — ver README, “E-mail”."
+        >
+          <EmailSettings status={emailStatus()} />
+        </AdminSection>
       </div>
     </AdminPage>
   );
