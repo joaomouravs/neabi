@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState, type FormEvent } from "react";
 
 import { BookCover } from "@/components/books/book-cover";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,7 @@ import {
 import { AssetKind } from "@/generated/prisma/enums";
 import { resolveAssetUrl } from "@/lib/asset-url";
 import type { ActionResult } from "@/server/errors";
+import type { UploadLimits } from "@/server/storage";
 
 type State = ActionResult<unknown> | null;
 
@@ -46,6 +47,7 @@ export function AssetsManager({
   assets,
   canAuthorize,
   canDelete,
+  limits,
 }: {
   bookId: string;
   coverImage: string | null;
@@ -53,6 +55,7 @@ export function AssetsManager({
   assets: AssetRecord[];
   canAuthorize: boolean;
   canDelete: boolean;
+  limits: UploadLimits;
 }) {
   const covers = assets.filter((asset) => asset.kind === AssetKind.COVER);
   const documents = assets.filter((asset) => asset.kind === AssetKind.PDF);
@@ -97,7 +100,8 @@ export function AssetsManager({
               bookId={bookId}
               label={coverImage ? "Substituir capa" : "Adicionar capa"}
               accept="image/jpeg,image/png,image/webp,image/avif"
-              hint="JPG, PNG, WebP ou AVIF, até 8 MB."
+              hint={`JPG, PNG, WebP ou AVIF, até ${formatLimit(limits.image)}.`}
+              maxBytes={limits.image}
             />
 
             {coverImage && canDelete ? (
@@ -153,7 +157,8 @@ export function AssetsManager({
             bookId={bookId}
             label="Enviar PDF"
             accept="application/pdf"
-            hint="Somente PDF, até 60 MB."
+            hint={`Somente PDF, até ${formatLimit(limits.document)}.`}
+            maxBytes={limits.document}
           />
         </div>
 
@@ -224,24 +229,43 @@ function UploadForm({
   label,
   accept,
   hint,
+  maxBytes,
 }: {
   action: (previous: unknown, formData: FormData) => Promise<ActionResult<unknown>>;
   bookId: string;
   label: string;
   accept: string;
   hint: string;
+  maxBytes: number;
 }) {
   const [state, formAction, pending] = useActionState<State, FormData>(
     action,
     null,
   );
+  const [tooLarge, setTooLarge] = useState<string | null>(null);
+
+  // O servidor confere de novo; checar aqui evita subir megabytes que seriam
+  // recusados — e, na Vercel, recusados antes com um erro genérico da
+  // plataforma em vez desta mensagem.
+  function checkSize(event: FormEvent<HTMLFormElement>) {
+    const file = new FormData(event.currentTarget).get("file");
+    if (file instanceof File && file.size > maxBytes) {
+      event.preventDefault();
+      setTooLarge(
+        `"${file.name}" tem ${formatBytes(file.size)}; o limite é ${formatLimit(maxBytes)}. Reduza o arquivo e envie de novo.`,
+      );
+    } else {
+      setTooLarge(null);
+    }
+  }
 
   return (
-    <form action={formAction} className="flex flex-col gap-3">
+    <form action={formAction} onSubmit={checkSize} className="flex flex-col gap-3">
       <input type="hidden" name="bookId" value={bookId} />
 
-      {state && !state.ok ? <Alert variant="danger">{state.error}</Alert> : null}
-      {state?.ok ? <Alert variant="success">Arquivo enviado.</Alert> : null}
+      {tooLarge ? <Alert variant="danger">{tooLarge}</Alert> : null}
+      {!tooLarge && state && !state.ok ? <Alert variant="danger">{state.error}</Alert> : null}
+      {!tooLarge && state?.ok ? <Alert variant="success">Arquivo enviado.</Alert> : null}
 
       <Field description={hint}>
         <FieldLabel>{label}</FieldLabel>
@@ -340,4 +364,8 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatLimit(bytes: number): string {
+  return `${Math.floor(bytes / (1024 * 1024))} MB`;
 }

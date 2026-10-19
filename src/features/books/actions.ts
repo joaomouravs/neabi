@@ -26,8 +26,7 @@ import {
   DOCUMENT_MIME_TYPES,
   getStorage,
   IMAGE_MIME_TYPES,
-  MAX_DOCUMENT_BYTES,
-  MAX_IMAGE_BYTES,
+  uploadLimits,
 } from "@/server/storage";
 import { bookFormSchema, digitalAssetAuthorizationSchema } from "@/validators/book";
 
@@ -235,7 +234,7 @@ export async function uploadCoverAction(
 
     await assertValidUpload(file, {
       allowed: IMAGE_MIME_TYPES,
-      maxBytes: MAX_IMAGE_BYTES,
+      maxBytes: uploadLimits().image,
     });
 
     const book = await prisma.book.findUnique({
@@ -375,7 +374,7 @@ export async function uploadDocumentAction(
 
     await assertValidUpload(file, {
       allowed: DOCUMENT_MIME_TYPES,
-      maxBytes: MAX_DOCUMENT_BYTES,
+      maxBytes: uploadLimits().document,
     });
 
     const book = await prisma.book.findUnique({

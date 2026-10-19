@@ -84,6 +84,24 @@ test("registra um exemplar físico e publica", async ({ page }) => {
   await expect(page.getByText("Publicado").first()).toBeVisible();
 });
 
+test("recusa um arquivo acima do limite antes de enviá-lo", async ({ page }) => {
+  await page.goto(`/admin/acervo?q=${encodeURIComponent(TITLE)}`);
+  await page.getByRole("link", { name: TITLE }).first().click();
+  await page.waitForLoadState("networkidle");
+
+  // 9 MB passa de qualquer limite de imagem (8 MB local, 4 MB na Vercel). O
+  // conteúdo é irrelevante: a recusa acontece antes de o arquivo sair do
+  // navegador.
+  await page.getByLabel("Adicionar capa").setInputFiles({
+    name: "capa-grande.jpg",
+    mimeType: "image/jpeg",
+    buffer: Buffer.alloc(9 * 1024 * 1024),
+  });
+  await page.getByRole("button", { name: "Enviar arquivo" }).first().click();
+
+  await expect(page.getByText(/"capa-grande\.jpg" tem 9\.0 MB; o limite é \d+ MB/)).toBeVisible();
+});
+
 test("a obra publicada aparece no catálogo com disponibilidade real", async ({
   page,
 }) => {

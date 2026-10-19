@@ -55,6 +55,36 @@ export const DOCUMENT_MIME_TYPES = ["application/pdf"] as const;
 export const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB
 export const MAX_DOCUMENT_BYTES = 60 * 1024 * 1024; // 60 MB
 
+/**
+ * Teto imposto pela hospedagem, e não pelo produto.
+ *
+ * Funções da Vercel recusam requisições e respostas acima de 4,5 MB antes de o
+ * código rodar. O upload passa por Server Action e a entrega pela rota
+ * `/api/arquivos`, então os dois sentidos esbarram nele: sem este teto, uma
+ * foto de 6 MB tirada no celular falharia com um erro genérico da plataforma.
+ * Os 4 MB deixam folga para o envelope multipart e os demais campos.
+ *
+ * Arquivos maiores na Vercel exigem envio direto do navegador ao Blob e
+ * entrega por streaming — ver README, "Armazenamento de arquivos".
+ */
+export const HOSTED_UPLOAD_LIMIT_BYTES = 4 * 1024 * 1024; // 4 MB
+
+export interface UploadLimits {
+  image: number;
+  document: number;
+}
+
+/** Limites efetivos no ambiente atual — os mesmos no formulário e no servidor. */
+export function uploadLimits(): UploadLimits {
+  if (!process.env.VERCEL) {
+    return { image: MAX_IMAGE_BYTES, document: MAX_DOCUMENT_BYTES };
+  }
+  return {
+    image: Math.min(MAX_IMAGE_BYTES, HOSTED_UPLOAD_LIMIT_BYTES),
+    document: Math.min(MAX_DOCUMENT_BYTES, HOSTED_UPLOAD_LIMIT_BYTES),
+  };
+}
+
 const EXTENSION_BY_MIME: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
@@ -80,7 +110,7 @@ export async function assertValidUpload(
   if (file.size > options.maxBytes) {
     const megabytes = Math.floor(options.maxBytes / (1024 * 1024));
     throw new ValidationError(
-      `O arquivo excede o limite de ${megabytes} MB.`,
+      `O arquivo excede o limite de ${megabytes} MB. Reduza o tamanho e envie de novo.`,
     );
   }
   if (!options.allowed.includes(file.type)) {

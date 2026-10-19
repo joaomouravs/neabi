@@ -12,6 +12,7 @@ import { formatDateTime } from "@/lib/date";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/server/auth/session";
 import { can } from "@/server/permissions/rbac";
+import { uploadLimits } from "@/server/storage";
 
 type Params = Promise<{ id: string }>;
 
@@ -193,6 +194,7 @@ export default async function EditBookPage({ params }: { params: Params }) {
               assets={book.assets}
               canAuthorize={can(actor, "asset:authorize")}
               canDelete={can(actor, "asset:delete")}
+              limits={uploadLimits()}
             />
           </AdminSection>
         </div>
