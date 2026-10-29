@@ -74,6 +74,7 @@ the center, so it stays in Portuguese.
 - [Segurança](#segurança)
 - [Acessibilidade](#acessibilidade)
 - [Pendências para o NEABI](#pendências-para-o-neabi)
+- [Licença](#licença)
 
 ---
 
@@ -325,50 +326,19 @@ instante passado alcança só as **últimas 6 horas**, e backup agendado não es
 disponível nesse plano. Um erro percebido no dia seguinte não teria volta só
 com a Neon.
 
-Por isso o repositório faz o próprio backup
-(`.github/workflows/backup-banco.yml`):
+Por isso há um backup próprio: um workflow do GitHub Actions que, **todo dia
+às 03:00** (horário de Nova Iguaçu), roda `pg_dump` com o cliente da mesma
+versão do servidor (Postgres 18), **restaura cada backup** num Postgres
+descartável antes de guardá-lo — e falha se a restauração não trouxer as
+obras —, cifra o arquivo com AES-256 (`gpg`) e o guarda como artefato por
+**30 dias**.
 
-- **todo dia às 03:00** (horário de Nova Iguaçu) e sob demanda, em GitHub →
-  Actions → "Backup do banco" → *Run workflow*;
-- `pg_dump` com o cliente da mesma versão do servidor (Postgres 18);
-- **cada backup é restaurado** num Postgres descartável antes de ser guardado,
-  e a execução falha se a restauração não trouxer as obras — backup que nunca
-  foi restaurado é uma hipótese;
-- cifrado com AES-256 (`gpg`) antes de sair do runner;
-- guardado como artefato da execução por **30 dias**, num repositório privado.
-
-Secrets do repositório: `BACKUP_DATABASE_URL` (a conexão **direta** — valor de
-`DATABASE_URL_UNPOOLED` na Vercel) e `BACKUP_PASSPHRASE` (a senha da cifra).
-
-> **Guarde a senha da cifra fora do GitHub**, num gerenciador de senhas da
-> equipe. O GitHub não deixa ler um secret de volta: sem uma cópia, nenhum
-> backup pode ser aberto. Se a senha mudar, os backups antigos continuam
-> exigindo a senha antiga.
-
-Se a execução falhar, o GitHub avisa por e-mail quem configurou o workflow.
-
-### Restaurar
-
-Nunca restaure por cima do banco em uso sem antes conferir o backup. O caminho
-seguro é restaurar num banco novo — um branch da Neon ou o Postgres local — e
-só então decidir.
-
-```bash
-# 1. Baixe o backup do dia escolhido (lista: gh run list -w "Backup do banco")
-gh run download <id-da-execucao> --repo joaomouravs/neabi --dir backup
-
-# 2. Decifre — pede a senha da cifra
-gpg --decrypt --output banco.dump backup/*/neabi-banco-*.dump.gpg
-
-# 3. Restaure num banco vazio, com pg_restore 18 ou mais novo
-createdb neabi_restaurado
-pg_restore --no-owner --no-privileges -d neabi_restaurado banco.dump
-```
-
-Para trocar o banco de produção pelo restaurado, crie um branch na Neon,
-restaure nele, confira, e só então aponte `DATABASE_URL` para ele — ou use a
-restauração de branch da própria Neon, se o problema estiver dentro das últimas
-6 horas. Apague `banco.dump` ao terminar: ele contém dados pessoais.
+O workflow fica num **repositório privado separado**, e não aqui: artefatos
+do Actions de um repositório público podem ser baixados por qualquer conta do
+GitHub, e o dump contém dados pessoais, mesmo cifrado. O passo a passo de
+configuração e restauração está no README daquele repositório. Quem for
+hospedar a própria instância pode reproduzir o mesmo arranjo com dois secrets:
+a conexão **direta** ao banco e a senha da cifra.
 
 ## Seed e acervo inicial
 
@@ -651,7 +621,8 @@ Checklist de produção:
    falha se não houver uma válida; preview e build local não tocam o banco.
    Fora da Vercel, `npm run db:migrate`. Nunca `db:push` em produção;
 4. `SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD` definidos antes do `db:seed`;
-5. `STORAGE_DRIVER="s3"` com bucket **privado** e credenciais configuradas;
+5. `STORAGE_DRIVER="blob"` (Vercel) ou `"s3"`, sempre com armazenamento
+   **privado** e credenciais configuradas;
 6. `MAIL_DRIVER="smtp"` configurado;
 7. as fotografias das capas em `public/acervo/capas/`;
 8. opcionalmente, `prisma/sql/search-indexes.sql` aplicado;
@@ -835,6 +806,20 @@ Itens que dependem de informação institucional e ficaram deliberadamente vazio
     a qualquer instante dos últimos 7 dias e snapshots agendados).
 12. **Domínio** — o site está em `neabi-alpha.vercel.app`. Um endereço
     institucional exige configuração de DNS pelo CEFET/RJ.
+
+## Licença
+
+O **código-fonte** está sob a [licença MIT](LICENSE).
+
+Ficam **fora** da licença:
+
+- as fotografias das capas em `public/acervo/capas/` e as capturas de tela em
+  `docs/img/`, que reproduzem capas de obras de terceiros — os direitos
+  pertencem às editoras e às pessoas autoras;
+- o nome, a identidade visual e os textos institucionais do NEABI e do
+  CEFET/RJ;
+- os dados bibliográficos do acervo inicial (`prisma/acervo-inicial.ts`), que
+  descrevem obras de terceiros.
 
 ---
 

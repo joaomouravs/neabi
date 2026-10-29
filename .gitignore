@@ -66,6 +66,45 @@ next-env.d.ts
 # do .env.example, porque o Git aplica a última regra que casa.
 .vercel
 
-.env*
+# Segredos gerados localmente
 .prod-secrets.json
-.env.neon
+*-senha.txt
+*.key
+*.p12
+*.pfx
+*.crt
+id_rsa*
+id_ed25519*
+
+# Backups e dumps do banco: contêm dados pessoais, mesmo cifrados.
+# `gh run download` (README, "Restaurar") grava em ./backup.
+/backup/
+*.dump
+*.dump.gpg
+*.sql.gz
+*.bak
+
+# Logs
+*.log
+logs/
+
+# Editores e sistema
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+
+# Instruções e configurações locais de assistentes de IA. São do ambiente de
+# quem desenvolve, não do projeto: nada aqui é necessário para instalar,
+# testar ou publicar. O `next dev` recria o AGENTS.md quando detecta um agente.
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+.claude/
+.agents/
+.cursor/
+.cursorrules
+.windsurfrules
+.aider*
+.github/copilot-instructions.md
+skills-lock.json
