@@ -1,0 +1,95 @@
+# Integração contínua: lint, tipos, migrações e testes contra um PostgreSQL real.
+#
+# A etapa de migrações existe por causa de um incidente concreto: a home e o
+# catálogo passaram um mês respondendo 500 em produção porque o schema tinha
+# uma coluna (`Book.sortTitle`) que nenhuma migração criava. Aqui as migrações
+# são aplicadas num banco vazio e comparadas com `schema.prisma`; qualquer
+# diferença derruba o job antes do deploy.
+#
+# Os testes E2E (Playwright) continuam locais: precisam de navegadores e do
+# servidor no ar, e o custo não compensa a cada push.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # Mesma porta e credenciais do `.env.example`, para que ele sirva sem edição.
+    # A versão acompanha a de produção (Postgres 18 na Neon).
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: neabi
+        ports:
+          - 54329:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      # `postinstall` já roda `prisma generate`.
+      - name: Instala as dependências
+        run: npm ci
+
+      # Segredos descartáveis, gerados a cada execução: o servidor recusa subir
+      # sem eles, e nenhum valor fixo precisa existir no repositório.
+      - name: Prepara o .env
+        run: |
+          cp .env.example .env
+          gerar() { node -e "console.log(require('node:crypto').randomBytes($1).toString('base64url'))"; }
+          sed -i \
+            -e "s|^AUTH_SECRET=\"\"|AUTH_SECRET=\"$(gerar 48)\"|" \
+            -e "s|^CRON_SECRET=\"\"|CRON_SECRET=\"$(gerar 24)\"|" \
+            -e "s|^SEED_ADMIN_PASSWORD=\"\"|SEED_ADMIN_PASSWORD=\"$(gerar 12)\"|" \
+            -e "s|^SEED_EDITOR_PASSWORD=\"\"|SEED_EDITOR_PASSWORD=\"$(gerar 12)\"|" \
+            -e "s|^SEED_MEMBER_PASSWORD=\"\"|SEED_MEMBER_PASSWORD=\"$(gerar 12)\"|" \
+            .env
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tipos
+        run: npm run typecheck
+
+      - name: Aplica as migrações num banco vazio
+        run: npm run db:migrate
+
+      # Roda antes de `db:indices`: os índices trigram ficam fora do schema de
+      # propósito e apareceriam como diferença. `--exit-code` sai com 2 quando
+      # o banco migrado não bate com `schema.prisma`.
+      - name: Confere que as migrações cobrem o schema
+        run: npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
+
+      - name: Índices e seed
+        run: |
+          npm run db:indices
+          npm run db:seed
+
+      - name: Testes (unitários, integração e componentes)
+        run: npm test

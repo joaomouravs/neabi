@@ -8,6 +8,41 @@ catálogo público pesquisável, controle de exemplares físicos, reservas para
 consulta presencial com fluxo de aprovação, painel administrativo e
 armazenamento de arquivos.
 
+[![CI](https://github.com/joaomouravs/neabi/actions/workflows/ci.yml/badge.svg)](https://github.com/joaomouravs/neabi/actions/workflows/ci.yml)
+· **No ar:** https://neabi-alpha.vercel.app
+
+<details>
+<summary><b>English overview</b></summary>
+
+<br>
+
+The catalog and reservation system I built for NEABI, the Afro-Brazilian and Indigenous
+Studies Center at CEFET/RJ (Nova Iguaçu campus). Anyone can search the collection; signed-in
+members request an in-person consultation of a physical copy, and staff approve, track and
+close each request from an admin panel. The rest of this README is the operating manual for
+the center, so it stays in Portuguese.
+
+- **Stack:** Next.js 16 (App Router, Server Actions), TypeScript `strict`, Prisma 7,
+  PostgreSQL, Auth.js v5, Zod, Tailwind CSS v4, Radix UI.
+- **Layers:** UI → Server Action (validation, permission) → service (business rules,
+  transactions) → repository → Prisma. No business rule lives in a React component.
+- **Security:** permissions checked on the server for every action; the user comes from the
+  session, never from the client; uploads validated by MIME, size and binary signature;
+  files served through a route that checks authorization; rate limits on login, sign-up and
+  reservations; CSP and security headers; configuration validated with Zod at startup.
+- **Data rules:** availability is derived from the physical copies, never stored as a flag;
+  unverified metadata stays empty instead of guessed; reading a PDF online needs a separate,
+  recorded authorization because of copyright.
+- **Tests:** Vitest for unit, integration (against a real PostgreSQL, including the guarantee
+  that two concurrent requests never get the same copy) and component tests; Playwright for
+  end-to-end flows on desktop and mobile, plus a sweep that fails if any page scrolls
+  sideways at seven screen widths. CI applies the migrations to an empty database and fails
+  if they do not match `schema.prisma`.
+- **Operations:** a daily encrypted `pg_dump` of the production database, with a restore
+  test before it is stored.
+
+</details>
+
 ---
 
 ## Sumário
@@ -575,6 +610,12 @@ próprios registros, identificados por prefixo, sem tocar no acervo semeado.
 ```bash
 npx playwright test --project=responsivo   # só a varredura de larguras
 ```
+
+**Integração contínua.** A cada push na `main` e em todo pull request,
+`.github/workflows/ci.yml` roda lint, tipos e `npm test` contra um PostgreSQL 18
+de verdade. Antes dos testes, aplica as migrações num banco vazio e confere com
+`prisma migrate diff` que elas cobrem todo o `schema.prisma`: um schema com
+coluna sem migração falha ali, e não em produção. Os testes E2E continuam locais.
 
 A verificação de rolagem horizontal existe porque o defeito é invisível em
 telas largas: um descendente `position: absolute` (um rótulo `.sr-only`, por
