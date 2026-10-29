@@ -11,6 +11,14 @@ armazenamento de arquivos.
 [![CI](https://github.com/joaomouravs/neabi/actions/workflows/ci.yml/badge.svg)](https://github.com/joaomouravs/neabi/actions/workflows/ci.yml)
 · **No ar:** https://neabi-alpha.vercel.app
 
+![Página inicial da Biblioteca NEABI-NI com a busca no acervo e obras em destaque](docs/img/inicio.jpg)
+
+| Ficha da obra | Reserva registrada | Atendimento no painel |
+|---|---|---|
+| ![Ficha de uma obra com capa, categorias e disponibilidade do exemplar físico](docs/img/obra.jpg) | ![Confirmação de uma solicitação de reserva com o número de protocolo](docs/img/reserva.jpg) | ![Painel administrativo com uma reserva aguardando análise e as ações de aprovar ou recusar](docs/img/admin-reserva.jpg) |
+
+<sub>Capturas de uma instância local com o acervo do seed.</sub>
+
 <details>
 <summary><b>English overview</b></summary>
 
@@ -33,10 +41,10 @@ the center, so it stays in Portuguese.
 - **Data rules:** availability is derived from the physical copies, never stored as a flag;
   unverified metadata stays empty instead of guessed; reading a PDF online needs a separate,
   recorded authorization because of copyright.
-- **Tests:** Vitest for unit, integration (against a real PostgreSQL, including the guarantee
-  that two concurrent requests never get the same copy) and component tests; Playwright for
-  end-to-end flows on desktop and mobile, plus a sweep that fails if any page scrolls
-  sideways at seven screen widths. CI applies the migrations to an empty database and fails
+- **Tests:** Vitest for unit, integration (against a real PostgreSQL, including six
+  simultaneous approvals racing for two copies: exactly two win, with different copies) and
+  component tests; Playwright for end-to-end flows on desktop and mobile, plus a sweep
+  that fails if any page scrolls sideways at seven screen widths. CI applies the migrations to an empty database and fails
   if they do not match `schema.prisma`.
 - **Operations:** a daily encrypted `pg_dump` of the production database, with a restore
   test before it is stored.
@@ -585,8 +593,10 @@ Cobertura por camada:
 - **Integração** — serviços contra o banco real:
   - *reservas* — transações, alocação atômica de exemplar, limite por pessoa,
     obra sem exemplar livre, obra despublicada, histórico gravado na mesma
-    transação e a garantia de que dois pedidos concorrentes nunca recebem o
-    mesmo exemplar;
+    transação e a garantia de que um exemplar nunca vai para duas reservas —
+    em sequência e com seis aprovações simultâneas disputando dois
+    exemplares, em que exatamente duas vencem. Sem a condição
+    `status = AVAILABLE` na atualização, esse teste falha;
   - *catalogação* — criação com autoridades bibliográficas e vínculos numa só
     transação, resolução de instituição por nome, endereço único, substituição
     (e não acúmulo) de vínculos na edição, publicação/arquivamento, recusa de

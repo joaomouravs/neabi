@@ -368,6 +368,78 @@ describe("alocação de exemplar", () => {
     expect(stillPending.copyId).toBeNull();
   });
 
+  it("entrega cada exemplar a uma única aprovação, mesmo com aprovações simultâneas", async () => {
+    // O teste anterior aprova uma reserva depois da outra. Aqui seis
+    // aprovações disputam dois exemplares ao mesmo tempo, cada uma na sua
+    // transação e na sua conexão: só a atualização condicional
+    // (`status = AVAILABLE`) decide quem fica com cada exemplar.
+    const obra = await prisma.book.create({
+      data: {
+        slug: `${PREFIX}-corrida`,
+        title: "Obra disputada",
+        status: "PUBLISHED",
+        publishedAt: new Date(),
+        searchText: "obra disputada",
+        copies: {
+          create: [
+            { code: `${PREFIX.toUpperCase()}-COR-1`, status: CopyStatus.AVAILABLE },
+            { code: `${PREFIX.toUpperCase()}-COR-2`, status: CopyStatus.AVAILABLE },
+          ],
+        },
+      },
+      select: { id: true, slug: true },
+    });
+
+    const pessoas = await Promise.all(
+      [1, 2, 3, 4, 5, 6].map((n) =>
+        prisma.user.create({
+          data: {
+            email: `${PREFIX}-corrida-${n}@exemplo.test`,
+            name: `Pessoa ${n}`,
+            role: Role.MEMBER,
+          },
+          select: { id: true, role: true },
+        }),
+      ),
+    );
+    for (const [i, pessoa] of pessoas.entries()) {
+      await createReservation(pessoa, obra.slug, formFor(`Corrida${i + 1}`));
+    }
+    const pedidos = await prisma.reservation.findMany({
+      where: { bookId: obra.id },
+      select: { id: true },
+    });
+    expect(pedidos).toHaveLength(6);
+
+    const resultados = await Promise.allSettled(
+      pedidos.map((pedido) =>
+        transitionReservation(staff, { reservationId: pedido.id, action: "approve" }),
+      ),
+    );
+
+    const recusadas = resultados.filter((r) => r.status === "rejected");
+    expect(resultados.filter((r) => r.status === "fulfilled")).toHaveLength(2);
+    expect(recusadas).toHaveLength(4);
+    for (const r of recusadas) {
+      expect((r as PromiseRejectedResult).reason.message).toMatch(
+        /não há exemplar disponível/i,
+      );
+    }
+
+    const aprovadas = await prisma.reservation.findMany({
+      where: { bookId: obra.id, status: ReservationStatus.APPROVED },
+      select: { copyId: true },
+    });
+    expect(aprovadas).toHaveLength(2);
+    expect(new Set(aprovadas.map((a) => a.copyId)).size).toBe(2);
+
+    const exemplares = await prisma.physicalCopy.findMany({
+      where: { bookId: obra.id },
+      select: { status: true },
+    });
+    expect(exemplares.every((c) => c.status === CopyStatus.RESERVED)).toBe(true);
+  });
+
   it("devolve o exemplar ao acervo quando a reserva é cancelada", async () => {
     const approved = await prisma.reservation.findFirstOrThrow({
       where: { userId: requesterOne.id, bookId, status: ReservationStatus.APPROVED },
