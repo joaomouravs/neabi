@@ -753,13 +753,21 @@ senha.
 
 ### Dependências
 
-`npm audit --omit=dev` aponta um alerta remanescente: `nodemailer` ≤ 10.0.5
-(SSRF e leitura de arquivo via opção `raw` ou conteúdo resolvido por caminho ou
-URL). A correção é a série 10, mas o Auth.js exige a série 8 — instalá-la deixa
-a árvore de dependências inválida. O projeto só envia `subject`, `text` e
-`html` como texto e desliga `disableFileAccess`/`disableUrlAccess` no
-transporte, o que fecha os vetores descritos. Atualize quando o `next-auth`
-aceitar `nodemailer` 10.
+`npm audit --omit=dev` aponta dois pacotes remanescentes:
+
+- **`nodemailer` ≤ 10.1.3**, trazido pelo Auth.js. Os alertas de SSRF e
+  leitura de arquivo (opção `raw` ou conteúdo resolvido por caminho ou URL)
+  não se aplicam: o projeto só envia `subject`, `text` e `html` como texto e
+  desliga `disableFileAccess`/`disableUrlAccess` no transporte. Os alertas do
+  `addressparser` (desvio de destinatário e DoS por endereço forjado) dependem
+  do endereço passado ao envio, e os e-mails de conta passam antes pelo
+  `z.email()` de `src/validators/common.ts` — o que reduz o risco, mas não o
+  elimina. O Auth.js ainda exige a série 8, então não há versão corrigida que
+  mantenha a árvore válida. Atualize quando o `next-auth` aceitar uma série
+  sem alertas.
+- **`zod` 4.1.11** dentro de `@vercel/cli-config`, dependência de
+  configuração da CLI da Vercel. A validação da aplicação usa o `zod` 4.6.7
+  da raiz.
 
 ## Acessibilidade
 
