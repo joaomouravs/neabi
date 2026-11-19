@@ -10,7 +10,7 @@ import {
   Search,
   Users,
 } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 
 import {
   AdminEmpty,

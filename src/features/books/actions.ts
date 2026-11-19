@@ -29,6 +29,7 @@ import {
   uploadLimits,
 } from "@/server/storage";
 import { bookFormSchema, digitalAssetAuthorizationSchema } from "@/validators/book";
+import { revalidatePublicPages } from "@/server/revalidate";
 
 /**
  * Ações administrativas do acervo.
@@ -37,11 +38,11 @@ import { bookFormSchema, digitalAssetAuthorizationSchema } from "@/validators/bo
  * servidor a cada chamada, nunca inferida do que a interface exibiu.
  */
 
-function revalidateBook(slug?: string): void {
+function revalidateBook(): void {
   revalidatePath("/admin/acervo");
-  revalidatePath("/acervo");
-  revalidatePath("/");
-  if (slug) revalidatePath(`/acervo/${slug}`);
+  // Destaques, obras relacionadas, contagens do rodapé e a própria ficha —
+  // inclusive no endereço antigo de uma obra que mudou de slug.
+  revalidatePublicPages();
 }
 
 /** Converte o FormData do formulário administrativo no formato do schema. */
@@ -115,7 +116,7 @@ export async function createBookAction(
     const data = parseBookForm(formData);
     const book = await createBook(data);
     audit("acervo.obra_criada", { bookId: book.id, slug: book.slug, actorId: actor.id });
-    revalidateBook(book.slug);
+    revalidateBook();
     destination = `/admin/acervo/${book.id}`;
   } catch (error) {
     return actionError(error);
@@ -138,7 +139,7 @@ export async function updateBookAction(
     const book = await updateBook(id, data);
 
     audit("acervo.obra_atualizada", { bookId: book.id, actorId: actor.id });
-    revalidateBook(book.slug);
+    revalidateBook();
     revalidatePath(`/admin/acervo/${id}`);
     return actionOk(book);
   } catch (error) {
@@ -167,11 +168,7 @@ export async function setBookStatusAction(
     await setBookStatus(id, status as BookStatus);
     audit("acervo.obra_status", { bookId: id, status, actorId: actor.id });
 
-    const book = await prisma.book.findUnique({
-      where: { id },
-      select: { slug: true },
-    });
-    revalidateBook(book?.slug);
+    revalidateBook();
     revalidatePath(`/admin/acervo/${id}`);
     return actionOk();
   } catch (error) {
@@ -279,7 +276,7 @@ export async function uploadCoverAction(
       actorId: actor.id,
     });
 
-    revalidateBook(book.slug);
+    revalidateBook();
     revalidatePath(`/admin/acervo/${book.id}`);
     return actionOk({ key: stored.key });
   } catch (error) {
@@ -351,7 +348,7 @@ export async function removeCoverAction(
       actorId: actor.id,
     });
 
-    revalidateBook(book.slug);
+    revalidateBook();
     revalidatePath(`/admin/acervo/${book.id}`);
     revalidatePath("/admin/arquivos");
     return actionOk();
@@ -410,7 +407,7 @@ export async function uploadDocumentAction(
       actorId: actor.id,
     });
 
-    revalidateBook(book.slug);
+    revalidateBook();
     revalidatePath(`/admin/acervo/${book.id}`);
     return actionOk({ assetId: asset.id });
   } catch (error) {
@@ -471,7 +468,7 @@ export async function authorizeAssetAction(
       actorId: actor.id,
     });
 
-    revalidateBook(asset.book.slug);
+    revalidateBook();
     revalidatePath(`/admin/acervo/${asset.bookId}`);
     revalidatePath("/admin/arquivos");
     return actionOk();
@@ -523,7 +520,7 @@ export async function deleteAssetAction(
     await storage.delete(asset.storageKey);
     await syncDigitalAvailability(asset.bookId);
 
-    revalidateBook(asset.book.slug);
+    revalidateBook();
     revalidatePath(`/admin/acervo/${asset.bookId}`);
     revalidatePath("/admin/arquivos");
     return actionOk();

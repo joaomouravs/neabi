@@ -22,6 +22,7 @@ import {
   updateCategorySchema,
   updatePhysicalCopySchema,
 } from "@/validators/book";
+import { revalidatePublicPages } from "@/server/revalidate";
 
 /**
  * Exemplares físicos e categorias.
@@ -88,7 +89,7 @@ export async function createCopyAction(
       select: { id: true },
     });
 
-    revalidateCopies(book.slug, book.id);
+    revalidateCopies(book.id);
     return actionOk(copy);
   } catch (error) {
     return actionError(error);
@@ -169,7 +170,7 @@ export async function updateCopyAction(
       },
     });
 
-    revalidateCopies(copy.book.slug, copy.book.id);
+    revalidateCopies(copy.book.id);
     return actionOk();
   } catch (error) {
     return actionError(error);
@@ -203,19 +204,18 @@ export async function deleteCopyAction(
     }
 
     await prisma.physicalCopy.delete({ where: { id } });
-    revalidateCopies(copy.book.slug, copy.book.id);
+    revalidateCopies(copy.book.id);
     return actionOk();
   } catch (error) {
     return actionError(error);
   }
 }
 
-function revalidateCopies(slug: string, bookId: string): void {
+function revalidateCopies(bookId: string): void {
   revalidatePath("/admin/exemplares");
   revalidatePath(`/admin/acervo/${bookId}`);
-  revalidatePath(`/acervo/${slug}`);
-  revalidatePath("/acervo");
   revalidatePath("/admin");
+  revalidatePublicPages();
 }
 
 // ---------------------------------------------------------------------------
@@ -347,6 +347,5 @@ export async function deleteCategoryAction(
 
 function revalidateCategories(): void {
   revalidatePath("/admin/categorias");
-  revalidatePath("/acervo");
-  revalidatePath("/");
+  revalidatePublicPages();
 }

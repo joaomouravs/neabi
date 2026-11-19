@@ -1,6 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 
 import {
   Container,
@@ -12,6 +12,12 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getPublicCatalogStats } from "@/server/repositories/book-repository";
 import { getSettings } from "@/server/repositories/settings-repository";
+
+/**
+ * Página estática, servida pelo CDN. As ações do painel que alteram o que ela
+ * mostra chamam `revalidatePath`; a hora é só um teto de segurança.
+ */
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "Sobre",

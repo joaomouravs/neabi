@@ -2,19 +2,20 @@ import type { MetadataRoute } from "next";
 
 import { siteConfig } from "@/config/site";
 import { listAllPublishedSlugs } from "@/server/repositories/book-repository";
-import { listCategoriesWithCounts } from "@/server/repositories/taxonomy-repository";
 
 /**
  * Sitemap.
  *
- * Inclui apenas o que é público: páginas institucionais, o acervo, cada obra
- * publicada e as categorias com resultado. Áreas autenticadas ficam de fora.
+ * Inclui apenas o que é público: páginas institucionais, o acervo e cada obra
+ * publicada. Áreas autenticadas ficam de fora, e o catálogo filtrado também —
+ * o `robots.txt` o bloqueia, e anunciar no sitemap uma URL bloqueada só gera
+ * aviso no Search Console.
  */
+/** Obras novas entram no sitemap sem esperar um novo deploy. */
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [books, categories] = await Promise.all([
-    listAllPublishedSlugs(),
-    listCategoriesWithCounts(),
-  ]);
+  const books = await listAllPublishedSlugs();
 
   const now = new Date();
 
@@ -34,14 +35,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  const categoryRoutes: MetadataRoute.Sitemap = categories
-    .filter((category) => category.bookCount > 0)
-    .map((category) => ({
-      url: `${siteConfig.url}/acervo?category=${category.slug}`,
-      lastModified: now,
-      changeFrequency: "weekly",
-      priority: 0.6,
-    }));
-
-  return [...staticRoutes, ...bookRoutes, ...categoryRoutes];
+  return [...staticRoutes, ...bookRoutes];
 }

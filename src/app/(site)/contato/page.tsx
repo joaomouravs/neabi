@@ -1,6 +1,6 @@
 import { ArrowRight, Clock, Globe, Mail, MapPin, Phone } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import type { ReactNode } from "react";
 
 import { ContactForm } from "@/components/layout/contact-form";
@@ -8,6 +8,12 @@ import { Container, PageHeader } from "@/components/layout/primitives";
 import { shiftLabels } from "@/config/catalog";
 import { getSettings } from "@/server/repositories/settings-repository";
 import { WEEKDAY_LABELS } from "@/validators/settings";
+
+/**
+ * Página estática, servida pelo CDN. As ações do painel que alteram o que ela
+ * mostra chamam `revalidatePath`; a hora é só um teto de segurança.
+ */
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "Contato",

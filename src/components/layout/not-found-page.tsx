@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/link";
 
 import { SearchCombobox } from "@/components/catalog/search-combobox";
 import { Button } from "@/components/ui/button";

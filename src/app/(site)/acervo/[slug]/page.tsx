@@ -1,7 +1,6 @@
 import { Quote } from "lucide-react";
 import type { Metadata } from "next";
-import { headers } from "next/headers";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
@@ -9,6 +8,7 @@ import { AvailabilityCard } from "@/components/books/availability-card";
 import { CopyReference, ShareButton } from "@/components/books/book-actions";
 import { BookCover, MissingCoverNote } from "@/components/books/book-cover";
 import { BookGrid } from "@/components/books/book-grid";
+import { BookViewTracker } from "@/components/books/book-view-tracker";
 import { StickyReserveBar } from "@/components/books/sticky-reserve-bar";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,18 +30,31 @@ import { ContributorRole } from "@/generated/prisma/enums";
 import { formatCredit } from "@/lib/credits";
 import { buildReference } from "@/lib/reference";
 import { cn } from "@/lib/utils";
-import { getActor } from "@/server/auth/session";
 import {
   findBookBySlug,
   findRelatedBooks,
+  listAllPublishedSlugs,
 } from "@/server/repositories/book-repository";
 import {
   computeAvailability,
   physicalAvailabilityLabel,
 } from "@/server/services/availability";
-import { recordBookView } from "@/server/services/book-service";
 
 type Params = Promise<{ slug: string }>;
+
+/**
+ * A ficha é a mesma para qualquer visitante, então é estática: gerada no
+ * build, servida pelo CDN e regenerada quando a equipe altera a obra, um
+ * exemplar ou uma reserva (`revalidatePath` nas ações) — com uma hora de
+ * teto, por segurança. Nada aqui pode ler cookie ou cabeçalho da requisição:
+ * isso tornaria a página dinâmica de novo.
+ */
+export const revalidate = 3600;
+
+export async function generateStaticParams() {
+  const books = await listAllPublishedSlugs();
+  return books.map(({ slug }) => ({ slug }));
+}
 
 const TONE_DOT: Record<NeabiTone, string> = {
   red: "bg-neabi-red",
@@ -59,27 +72,51 @@ export async function generateMetadata({
   if (!book) return { title: "Obra não encontrada" };
 
   const credit = formatCredit(book.contributors);
+  // Sem sinopse catalogada, a prévia do link diz o que a pessoa vai encontrar
+  // em vez de mostrar só um nome solto.
+  const facts = [book.subtitle, credit, book.publisher?.name].filter(Boolean).join(" · ");
   const description =
     book.description ??
     book.summary ??
-    [book.subtitle, credit, book.publisher?.name].filter(Boolean).join(" · ");
+    `${facts ? `${facts}. ` : ""}Ficha no acervo da ${siteConfig.name}, com a disponibilidade para consulta presencial.`;
+  const title = `${book.title} — ${siteConfig.name}`;
+
+  // Declarar `openGraph` aqui substitui o do layout por inteiro, inclusive a
+  // imagem: por isso ela é repetida. A capa não entra na prévia porque as
+  // fotografias estão em WebP, formato que nem todo aplicativo de mensagens
+  // aceita em `og:image`.
+  const image = {
+    url: "/opengraph-image.png",
+    width: 1200,
+    height: 630,
+    alt: `${siteConfig.name} — acervo de estudos afro-brasileiros e indígenas`,
+  };
 
   return {
     title: book.title,
-    description: description || siteConfig.description,
+    description,
     alternates: { canonical: `/acervo/${book.slug}` },
     openGraph: {
       type: "book",
-      title: `${siteConfig.name} — ${book.title}`,
-      description: description || siteConfig.description,
+      title,
+      description,
       url: `${siteConfig.url}/acervo/${book.slug}`,
+      siteName: siteConfig.name,
+      locale: "pt_BR",
+      images: [image],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [image.url],
     },
   };
 }
 
 export default async function BookPage({ params }: { params: Params }) {
   const { slug } = await params;
-  const [book, actor] = await Promise.all([findBookBySlug(slug), getActor()]);
+  const book = await findBookBySlug(slug);
 
   if (!book) notFound();
 
@@ -90,12 +127,9 @@ export default async function BookPage({ params }: { params: Params }) {
   const contributorsByRole = groupContributors(book.contributors);
   const reference = buildReference(book);
 
-  // Contabiliza o acesso sem bloquear a renderização da página.
-  void trackView(book.id, actor?.id ?? null);
-
-  const reserveHref = actor
-    ? `/acervo/${book.slug}/reservar`
-    : `/login?callbackUrl=${encodeURIComponent(`/acervo/${book.slug}/reservar`)}`;
+  // Quem não entrou na conta é levado ao login pela própria página de reserva,
+  // que volta para cá depois.
+  const reserveHref = `/acervo/${book.slug}/reservar`;
 
   // O tipo de material já está no selo acima do título.
   const quickFacts = [
@@ -280,7 +314,6 @@ export default async function BookPage({ params }: { params: Params }) {
                 slug={book.slug}
                 availability={availability}
                 copies={book.copies}
-                isAuthenticated={Boolean(actor)}
                 reserveCtaId="cta-reserva"
               />
             </div>
@@ -379,6 +412,8 @@ export default async function BookPage({ params }: { params: Params }) {
         />
       </Suspense>
 
+      <BookViewTracker slug={book.slug} />
+
       {availability.physicalAvailable ? (
         <StickyReserveBar
           href={reserveHref}
@@ -471,19 +506,4 @@ function groupContributors(
         .map((contributor) => contributor.person),
     }))
     .filter((group) => group.names.length > 0);
-}
-
-/**
- * Registra a visualização com um identificador de visitante derivado de
- * cabeçalhos — nunca do IP em texto claro (ver `recordBookView`).
- */
-async function trackView(bookId: string, userId: string | null): Promise<void> {
-  const headerList = await headers();
-  const seed =
-    userId ??
-    [headerList.get("x-forwarded-for"), headerList.get("user-agent")]
-      .filter(Boolean)
-      .join("|");
-
-  await recordBookView(bookId, { userId, visitorSeed: seed || null });
 }

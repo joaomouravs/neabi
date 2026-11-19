@@ -1,5 +1,5 @@
 import { ArrowRight, BookOpen, MapPin } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { cache, Suspense, type ReactNode } from "react";
 
 import { BookCard } from "@/components/books/book-card";
@@ -30,6 +30,12 @@ import {
   listCategoriesWithCounts,
   listContributorsWithCounts,
 } from "@/server/repositories/taxonomy-repository";
+
+/**
+ * Página estática, servida pelo CDN. As ações do painel que alteram o que ela
+ * mostra chamam `revalidatePath`; a hora é só um teto de segurança.
+ */
+export const revalidate = 3600;
 
 /** O hero e os destaques leem a mesma lista: uma consulta por requisição. */
 const getFeatured = cache(() => findFeaturedBooks(FEATURED_BOOKS_LIMIT));

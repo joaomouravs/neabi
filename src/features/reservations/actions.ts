@@ -25,6 +25,7 @@ import {
   reservationActionSchema,
   reservationFormSchema,
 } from "@/validators/reservation";
+import { revalidatePublicPages } from "@/server/revalidate";
 
 /**
  * Ações de reserva.
@@ -126,7 +127,7 @@ export async function createReservationAction(
 
     const reservation = await createReservation(actor, bookSlug, parsed.data);
 
-    revalidatePath(`/acervo/${bookSlug}`);
+    revalidatePublicPages();
     revalidatePath("/minha-conta/reservas");
 
     destination = `/acervo/${bookSlug}/reservar/confirmacao?protocolo=${encodeURIComponent(reservation.protocol)}`;
@@ -168,7 +169,7 @@ export async function cancelReservationAction(
 
     revalidatePath("/minha-conta/reservas");
     revalidatePath(`/minha-conta/reservas/${reservation.id}`);
-    revalidatePath(`/acervo/${reservation.book.slug}`);
+    revalidatePublicPages();
 
     return actionOk();
   } catch (error) {
@@ -207,6 +208,9 @@ export async function manageReservationAction(
     revalidatePath(`/admin/reservas/${parsed.data.reservationId}`);
     revalidatePath("/admin");
     revalidatePath("/minha-conta/reservas");
+    // Aprovar, entregar, devolver ou recusar muda a situação de um exemplar,
+    // que aparece na ficha da obra e nos cartões do acervo.
+    revalidatePublicPages();
 
     return actionOk();
   } catch (error) {

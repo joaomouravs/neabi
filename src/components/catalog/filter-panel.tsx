@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, SlidersHorizontal } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { useId, useState } from "react";
 
 import { BottomSheet } from "@/components/ui/bottom-sheet";

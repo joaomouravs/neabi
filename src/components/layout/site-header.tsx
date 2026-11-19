@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -27,12 +27,7 @@ import { cn } from "@/lib/utils";
 
 import { NeabiMark } from "./neabi-mark";
 import { Container } from "./primitives";
-
-export interface HeaderUser {
-  name: string | null;
-  email: string;
-  isStaff: boolean;
-}
+import { useSessionState, type HeaderUser } from "./session-state";
 
 const EASE = [0.2, 0.7, 0.2, 1] as const;
 
@@ -47,7 +42,8 @@ const EASE = [0.2, 0.7, 0.2, 1] as const;
  * Busca e menu são diálogos Radix: foco preso, Escape fecha, rolagem do corpo
  * bloqueada e o foco volta para o botão que abriu.
  */
-export function SiteHeader({ user }: { user: HeaderUser | null }) {
+export function SiteHeader() {
+  const { status: sessionStatus, user, clear: clearSession } = useSessionState();
   const pathname = usePathname();
   const reducedMotion = useReducedMotion();
 
@@ -116,6 +112,11 @@ export function SiteHeader({ user }: { user: HeaderUser | null }) {
   };
 
   const duration = reducedMotion ? 0 : 0.22;
+
+  const logout = () => {
+    clearSession();
+    logoutFormRef.current?.requestSubmit();
+  };
 
   return (
     <header
@@ -190,8 +191,12 @@ export function SiteHeader({ user }: { user: HeaderUser | null }) {
           </button>
 
           <div className="hidden lg:block">
-            {user ? (
-              <AccountMenu user={user} onLogout={() => logoutFormRef.current?.requestSubmit()} />
+            {sessionStatus === "loading" ? (
+              // Reserva o lugar do botão enquanto a sessão é consultada, para
+              // o cabeçalho não mudar de largura quando a resposta chega.
+              <span aria-hidden="true" className="block h-10 w-24" />
+            ) : user ? (
+              <AccountMenu user={user} onLogout={logout} />
             ) : (
               <Button asChild variant="dark" size="sm" className="min-h-10 px-5">
                 <Link href="/login">Entrar</Link>
@@ -229,7 +234,7 @@ export function SiteHeader({ user }: { user: HeaderUser | null }) {
                         pathname={pathname}
                         isActive={isActive}
                         onClose={() => setMenuOpen(false)}
-                        onLogout={() => logoutFormRef.current?.requestSubmit()}
+                        onLogout={logout}
                       />
                     </motion.div>
                   </Dialog.Content>

@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowDownUp, Check, X } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";

@@ -1,6 +1,6 @@
 import { ArrowRight, Calendar, CircleCheck, Clock, History } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 
 import { ReservationList } from "@/components/reservations/reservation-list";
 import { Button } from "@/components/ui/button";

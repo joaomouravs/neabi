@@ -1,5 +1,5 @@
 import { ArrowLeft, type LucideIcon } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import type { ComponentProps, ReactNode } from "react";
 
 import { cn } from "@/lib/utils";

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState, type KeyboardEvent } from "react";
 

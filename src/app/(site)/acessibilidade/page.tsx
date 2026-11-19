@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 
 import { LegalPage } from "@/components/layout/legal-page";
+
+/**
+ * Página estática, servida pelo CDN. As ações do painel que alteram o que ela
+ * mostra chamam `revalidatePath`; a hora é só um teto de segurança.
+ */
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "Acessibilidade",

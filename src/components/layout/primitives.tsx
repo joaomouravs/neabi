@@ -1,5 +1,5 @@
 import { ChevronRight } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import type { ComponentProps, ElementType, ReactNode } from "react";
 
 import { cn } from "@/lib/utils";

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/link";
 
 import { AdminPage, AdminSection, StatCard } from "@/components/admin/admin-ui";
 import { reservationStatusLabels } from "@/config/catalog";

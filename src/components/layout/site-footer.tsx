@@ -1,5 +1,5 @@
 import { ArrowUpRight } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import type { ReactNode } from "react";
 
 import { mainNavigation } from "@/config/site";
@@ -8,6 +8,7 @@ import type { Settings } from "@/generated/prisma/client";
 import { WEEKDAY_SHORT_LABELS } from "@/validators/settings";
 
 import { NeabiMark } from "./neabi-mark";
+import { FooterAccountLink } from "./footer-account-link";
 import { Container } from "./primitives";
 
 interface SocialLinks {
@@ -36,11 +37,9 @@ const SOCIAL_LABELS: Record<keyof SocialLinks, string> = {
 export function SiteFooter({
   settings,
   categories,
-  signedIn,
 }: {
   settings: Settings;
   categories: { slug: string; name: string }[];
-  signedIn: boolean;
 }) {
   const social = (settings.socialLinks ?? {}) as SocialLinks;
   const socialEntries = (
@@ -108,11 +107,7 @@ export function SiteFooter({
           </FooterColumn>
 
           <FooterColumn title="Sua conta" className="lg:col-span-2">
-            {signedIn ? (
-              <FooterLink href="/minha-conta">Minha conta</FooterLink>
-            ) : (
-              <FooterLink href="/login">Entrar ou criar conta</FooterLink>
-            )}
+            <FooterAccountLink className={FOOTER_LINK_CLASS} />
             <FooterLink href="/minha-conta/reservas">Minhas reservas</FooterLink>
             <FooterLink href="/minha-conta/historico">Histórico</FooterLink>
           </FooterColumn>
@@ -220,12 +215,12 @@ function FooterColumn({
   );
 }
 
+const FOOTER_LINK_CLASS =
+  "link-reveal text-[0.9375rem] text-neabi-cream/75 hover:text-neabi-cream";
+
 function FooterLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <Link
-      href={href}
-      className="link-reveal text-[0.9375rem] text-neabi-cream/75 hover:text-neabi-cream"
-    >
+    <Link href={href} className={FOOTER_LINK_CLASS}>
       {children}
     </Link>
   );

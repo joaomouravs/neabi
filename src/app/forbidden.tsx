@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/link";
 
 import { ErrorLayout } from "@/components/layout/error-layout";
 import { Button } from "@/components/ui/button";

@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 
 import { logger } from "@/server/logger";
 import { expireOverdueReservations } from "@/server/services/reservation-service";
+import { revalidatePublicPages } from "@/server/revalidate";
 
 /**
  * Expiração de reservas com prazo de retirada vencido.
@@ -52,6 +53,9 @@ async function executar(request: Request): Promise<NextResponse> {
 
   try {
     const expiradas = await expireOverdueReservations();
+    // Exemplares devolvidos ao acervo aparecem como disponíveis nas páginas
+    // públicas, que são estáticas.
+    if (expiradas > 0) revalidatePublicPages();
     logger.info("Manutenção: reservas expiradas", { expiradas });
     return NextResponse.json({ expiradas });
   } catch (error) {

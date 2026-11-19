@@ -1,8 +1,10 @@
 import { BookOpen } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 
 import { Button } from "@/components/ui/button";
 import { copyStatusLabels } from "@/config/catalog";
+
+import { SignInHint } from "./sign-in-hint";
 import type { CopyStatus } from "@/generated/prisma/enums";
 import { cn } from "@/lib/utils";
 import {
@@ -32,19 +34,17 @@ export function AvailabilityCard({
   slug,
   availability,
   copies,
-  isAuthenticated,
   reserveCtaId,
 }: {
   slug: string;
   availability: Availability;
   copies: { id: string; code: string; status: CopyStatus }[];
-  isAuthenticated: boolean;
   /** `id` do botão principal — a barra fixa do celular observa a visibilidade dele. */
   reserveCtaId?: string;
 }) {
-  const reserveHref = isAuthenticated
-    ? `/acervo/${slug}/reservar`
-    : `/login?callbackUrl=${encodeURIComponent(`/acervo/${slug}/reservar`)}`;
+  // A página de reserva leva ao login quem ainda não entrou e volta depois.
+  // O cartão não sabe quem está conectado: a ficha da obra é estática.
+  const reserveHref = `/acervo/${slug}/reservar`;
 
   const physicalTone = availability.physicalAvailable
     ? "bg-neabi-green"
@@ -133,11 +133,11 @@ export function AvailabilityCard({
           ) : null}
         </div>
 
-        {!isAuthenticated && availability.physicalAvailable ? (
-          <p className="mt-3 text-[0.8125rem] leading-snug text-ink-500">
+        {availability.physicalAvailable ? (
+          <SignInHint className="mt-3 text-[0.8125rem] leading-snug text-ink-500">
             É preciso entrar na sua conta para solicitar a reserva. A consulta
             ao catálogo continua livre.
-          </p>
+          </SignInHint>
         ) : null}
 
         <div className="mt-6 border-t border-border pt-5">

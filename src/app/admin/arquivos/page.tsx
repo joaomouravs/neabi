@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/link";
 
 import { AdminPage, AdminTable, StatCard, Td, Th } from "@/components/admin/admin-ui";
 import { Badge } from "@/components/ui/badge";

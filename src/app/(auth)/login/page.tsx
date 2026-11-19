@@ -1,6 +1,6 @@
 import { ArrowLeft, Calendar, History, Search } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { redirect } from "next/navigation";
 
 import { LoginForm } from "@/components/auth/auth-forms";
