@@ -87,7 +87,7 @@ try {
     [
       "Biblioteca NEABI-NI — acesso de administração",
       "",
-      `Endereço: https://biblioteca-neabi-ni.netlify.app/login`,
+      `Endereço: https://neabiufcini.com.br/login`,
       `E-mail:   ${email}`,
       `Senha temporária: ${temporaryPassword}`,
       "",

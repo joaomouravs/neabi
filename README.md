@@ -9,7 +9,7 @@ consulta presencial com fluxo de aprovação, painel administrativo e
 armazenamento de arquivos.
 
 [![CI](https://github.com/joaomouravs/neabi/actions/workflows/ci.yml/badge.svg)](https://github.com/joaomouravs/neabi/actions/workflows/ci.yml)
-· **No ar:** https://biblioteca-neabi-ni.netlify.app (Netlify — ver [Hospedagem na Netlify](#hospedagem-na-netlify))
+· **No ar:** https://neabiufcini.com.br (Netlify — ver [Hospedagem na Netlify](#hospedagem-na-netlify))
 
 ![Página inicial da Biblioteca NEABI-NI com a busca no acervo e obras em destaque](docs/img/inicio.jpg)
 
@@ -651,6 +651,7 @@ reserva), pelo workflow de restauração do repositório de backup.
 | Arquivos enviados | Netlify Blobs, store `neabi-arquivos` (`STORAGE_DRIVER="netlify"`) |
 | Expiração diária | Função agendada `netlify/functions/expirar-reservas.mjs` (09:00 UTC) |
 | Variáveis | `scripts/preparar-env-netlify.mjs` — gera os segredos e importa sem exibi-los |
+| Domínio | `neabiufcini.com.br`, no Registro.br, com DNS do próprio Registro.br em modo avançado: `A @ → 75.2.60.5` (balanceador da Netlify) e `CNAME www → biblioteca-neabi-ni.netlify.app`. Certificado Let's Encrypt emitido e renovado pela Netlify. O endereço `biblioteca-neabi-ni.netlify.app` continua respondendo |
 
 **Plano Free, com limite rígido.** São 300 créditos por mês para o time; ao
 acabarem, **o site é pausado** até o mês seguinte, como aconteceu na Vercel.
@@ -914,8 +915,9 @@ Itens que dependem de informação institucional e ficaram deliberadamente vazio
     [Backup e restauração](#backup-e-restauração)). Falta decidir quem guarda a
     senha da cifra e se vale contratar um plano pago da Neon (Launch: restauração
     a qualquer instante dos últimos 7 dias e snapshots agendados).
-12. **Domínio** — o site está em `biblioteca-neabi-ni.netlify.app`. Um
-    endereço institucional exige configuração de DNS pelo CEFET/RJ.
+12. **Domínio** — o site está em `neabiufcini.com.br` (Registro.br, titular
+    pessoa física, vence em 19/11/2027). Defina quem renova o domínio e se ele
+    passa para a titularidade da instituição.
 13. **Plano de hospedagem** — o Hobby da Vercel é para uso pessoal e não
     comercial, guarda log por uma hora e bloqueia o projeto ao atingir a cota.
     Para um serviço institucional, o Pro (US$ 20/mês por pessoa da equipe na
