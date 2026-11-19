@@ -508,35 +508,23 @@ versão em texto puro.
 Falha de e-mail nunca desfaz a operação: a reserva já está registrada e o banco
 é a fonte de verdade.
 
-### Ligar o envio com o Resend
+### Envio de e-mail pelo Resend
 
-O provedor escolhido é o **Resend** (Marketplace da Vercel, plano Free: 3.000
-e-mails por mês, 100 por dia), usado por SMTP — o transporte do projeto não
-muda. Os termos já foram aceitos na conta da Vercel; falta só o **domínio**,
-que o Resend exige na criação e **não deixa trocar depois**. Sem domínio
-verificado, ele só entrega para o e-mail da própria conta — por isso o envio
-segue desligado (`MAIL_DRIVER="console"`) até lá.
+Desde 19/11/2026 os avisos de reserva saem pelo **Resend** (conta própria do
+NEABI, plano Free: 3.000 e-mails por mês, 100 por dia), por SMTP — o
+transporte do projeto não muda. O remetente é
+`Biblioteca NEABI-NI <nao-responda@neabiufcini.com.br>`, enviado a partir de
+São Paulo (`sa-east-1`), sem rastreamento de abertura nem de cliques.
 
-Com o domínio decidido (um subdomínio do CEFET/RJ, ou um domínio próprio):
+| Onde | O quê |
+|---|---|
+| Resend | domínio `neabiufcini.com.br` verificado; chave de API só com permissão de envio para esse domínio |
+| Registro.br (zona DNS) | `TXT resend._domainkey` (DKIM), `CNAME send → send.forge.rmta.net` e `CNAME rsend → rsend-sae1.forge.rmta.net` (SPF e retorno), `TXT _dmarc → v=DMARC1; p=none;` |
+| Netlify | `MAIL_DRIVER=smtp`, `SMTP_HOST=smtp.resend.com`, `SMTP_PORT=465`, `SMTP_USER=resend`, `MAIL_FROM`; a chave fica em `SMTP_PASSWORD`, **marcada como segredo** |
 
-```bash
-# 1. Cria o recurso no plano gratuito, enviando a partir de São Paulo
-vercel integration add resend --plan free --name neabi-email   -m domain=<dominio> -m region=sa-east-1 --scope joaomouravs-projects
-
-# 2. Adicione no DNS do domínio os registros que o Resend mostrar
-#    (SPF, DKIM e MX de retorno) e aguarde a verificação no painel do Resend.
-
-# 3. Variáveis de produção — nenhuma é segredo; a senha vem da integração
-vercel env add MAIL_DRIVER production   # smtp
-vercel env add SMTP_HOST production     # smtp.resend.com
-vercel env add SMTP_PORT production     # 465
-vercel env add SMTP_USER production     # resend
-vercel env add MAIL_FROM production     # Biblioteca NEABI-NI <nao-responda@<dominio>>
-```
-
-`SMTP_PASSWORD` fica sem valor de propósito: no SMTP do Resend a senha é a
-chave da API, e o transporte usa `RESEND_API_KEY`, que a integração injeta e
-renova sozinha.
+Mudar uma variável na Netlify só vale depois de um novo deploy de produção —
+um commit vazio com `[publicar]` basta. Para trocar a chave, crie outra no
+Resend, substitua `SMTP_PASSWORD` na Netlify, publique e apague a antiga.
 
 Depois do deploy, em **Configurações → E-mail**, use "Enviar e-mail de teste
 para a minha conta": a mensagem sai pelo provedor real e, se ele recusar, o
@@ -902,11 +890,10 @@ Itens que dependem de informação institucional e ficaram deliberadamente vazio
 8. **Marca oficial** — `NeabiMark` é uma composição tipográfica com as cores
    institucionais. Ao receber o arquivo vetorial do núcleo, basta substituir o
    conteúdo desse componente.
-9. **Envio de e-mail** — em produção `MAIL_DRIVER="console"`: aprovação,
-   recusa e prazo de retirada só aparecem em Minhas reservas. Resend escolhido
-   e termos aceitos; falta decidir o **domínio remetente** (subdomínio do
-   CEFET/RJ ou domínio próprio). Passo a passo em
-   [Ligar o envio com o Resend](#ligar-o-envio-com-o-resend).
+9. **Envio de e-mail** — ligado desde 19/11/2026 pelo Resend (ver
+   [Envio de e-mail pelo Resend](#envio-de-e-mail-pelo-resend)). O plano Free
+   envia até 100 e-mails por dia; acima disso, os avisos falham (a reserva
+   segue valendo e o erro fica no log).
 10. **LGPD** — a política de privacidade não identifica o controlador, o
     encarregado (DPO), a base legal nem o prazo de retenção dos dados, porque
     são definições institucionais. Preencha-os em `/privacidade` com o setor
