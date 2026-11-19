@@ -7,7 +7,7 @@ import { AssetKind } from "@/generated/prisma/enums";
 import { resolveAssetUrl } from "@/lib/asset-url";
 import { formatDateTime } from "@/lib/date";
 import { prisma } from "@/lib/prisma";
-import { requireAnyPermission } from "@/server/auth/session";
+import { requireAnyPagePermission } from "@/server/auth/session";
 
 const KIND_LABELS: Record<AssetKind, string> = {
   COVER: "Capa",
@@ -16,7 +16,7 @@ const KIND_LABELS: Record<AssetKind, string> = {
 };
 
 export default async function AdminAssetsPage() {
-  await requireAnyPermission(["asset:upload", "asset:authorize"]);
+  await requireAnyPagePermission(["asset:upload", "asset:authorize"]);
 
   const [assets, covers, documents, authorized] = await Promise.all([
     prisma.digitalAsset.findMany({

@@ -16,7 +16,7 @@ import { EmptyState } from "@/components/ui/feedback";
 import { patronTypeLabels, shiftLabels } from "@/config/catalog";
 import { ReservationStatus } from "@/generated/prisma/enums";
 import { formatDate, formatDateTime } from "@/lib/date";
-import { requirePermission } from "@/server/auth/session";
+import { requirePagePermission } from "@/server/auth/session";
 import {
   countReservationsByStatus,
   listReservationsForAdmin,
@@ -42,7 +42,7 @@ export default async function AdminReservationsPage({
 }: {
   searchParams: SearchParams;
 }) {
-  await requirePermission("reservation:read:any");
+  await requirePagePermission("reservation:read:any");
 
   const raw = await searchParams;
   const flat = Object.fromEntries(

@@ -23,7 +23,7 @@ import { ReservationStatusBadge } from "@/components/reservations/reservation-st
 import { Button } from "@/components/ui/button";
 import { shiftLabels } from "@/config/catalog";
 import { formatDate, formatDateTime } from "@/lib/date";
-import { requireAnyPermission } from "@/server/auth/session";
+import { requireAnyPagePermission } from "@/server/auth/session";
 import {
   getDashboardMetrics,
   getEmptySearches,
@@ -31,7 +31,7 @@ import {
 import { listReservationsForAdmin } from "@/server/repositories/reservation-repository";
 
 export default async function AdminDashboardPage() {
-  await requireAnyPermission(["book:create", "reservation:manage"]);
+  await requireAnyPagePermission(["book:create", "reservation:manage"]);
 
   const [metrics, pending, emptySearches] = await Promise.all([
     getDashboardMetrics(),

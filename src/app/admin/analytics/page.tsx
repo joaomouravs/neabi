@@ -2,7 +2,7 @@ import Link from "@/components/ui/link";
 
 import { AdminPage, AdminSection, StatCard } from "@/components/admin/admin-ui";
 import { reservationStatusLabels } from "@/config/catalog";
-import { requirePermission } from "@/server/auth/session";
+import { requirePagePermission } from "@/server/auth/session";
 import {
   getCategoryDistribution,
   getDashboardMetrics,
@@ -13,7 +13,7 @@ import {
 } from "@/server/repositories/analytics-repository";
 
 export default async function AdminAnalyticsPage() {
-  await requirePermission("analytics:read");
+  await requirePagePermission("analytics:read");
 
   const [metrics, mostViewed, topSearches, emptySearches, byStatus, categories] =
     await Promise.all([

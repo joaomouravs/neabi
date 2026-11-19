@@ -7,7 +7,7 @@ import { ADMIN_PAGE_SIZE } from "@/config/site";
 import { Prisma } from "@/generated/prisma/client";
 import { escapeLike } from "@/lib/text";
 import { prisma } from "@/lib/prisma";
-import { requirePermission } from "@/server/auth/session";
+import { requirePagePermission } from "@/server/auth/session";
 import { can } from "@/server/permissions/rbac";
 import { ACTIVE_STATUSES } from "@/server/services/reservation-rules";
 
@@ -18,7 +18,7 @@ export default async function AdminUsersPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const actor = await requirePermission("user:read:any");
+  const actor = await requirePagePermission("user:read:any");
 
   const raw = await searchParams;
   const single = (key: string) => {

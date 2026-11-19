@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { bookStatusLabels } from "@/config/catalog";
 import { formatDateTime } from "@/lib/date";
 import { prisma } from "@/lib/prisma";
-import { requirePermission } from "@/server/auth/session";
+import { requirePagePermission } from "@/server/auth/session";
 import { can } from "@/server/permissions/rbac";
 import { uploadLimits } from "@/server/storage";
 
@@ -19,7 +19,7 @@ type Params = Promise<{ id: string }>;
 export default async function EditBookPage({ params }: { params: Params }) {
   const [{ id }, actor] = await Promise.all([
     params,
-    requirePermission("book:update"),
+    requirePagePermission("book:update"),
   ]);
 
   const [book, categories] = await Promise.all([

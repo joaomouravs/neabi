@@ -1,10 +1,10 @@
 import { AdminPage } from "@/components/admin/admin-ui";
 import { BookForm } from "@/components/admin/book-form";
 import { prisma } from "@/lib/prisma";
-import { requirePermission } from "@/server/auth/session";
+import { requirePagePermission } from "@/server/auth/session";
 
 export default async function NewBookPage() {
-  await requirePermission("book:create");
+  await requirePagePermission("book:create");
 
   const categories = await prisma.category.findMany({
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],

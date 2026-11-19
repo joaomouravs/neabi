@@ -10,7 +10,7 @@ import { ADMIN_PAGE_SIZE } from "@/config/site";
 import { CopyStatus, Prisma } from "@/generated/prisma/client";
 import { escapeLike, normalizeText } from "@/lib/text";
 import { prisma } from "@/lib/prisma";
-import { requirePermission } from "@/server/auth/session";
+import { requirePagePermission } from "@/server/auth/session";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -19,7 +19,7 @@ export default async function AdminCopiesPage({
 }: {
   searchParams: SearchParams;
 }) {
-  await requirePermission("copy:manage");
+  await requirePagePermission("copy:manage");
 
   const raw = await searchParams;
   const single = (key: string) => {

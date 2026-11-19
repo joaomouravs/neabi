@@ -1,12 +1,12 @@
 import { AdminPage, AdminSection } from "@/components/admin/admin-ui";
 import { EmailSettings } from "@/components/admin/email-settings";
 import { SettingsForm } from "@/components/admin/settings-form";
-import { requirePermission } from "@/server/auth/session";
+import { requirePagePermission } from "@/server/auth/session";
 import { emailStatus } from "@/server/notifications";
 import { getSettings } from "@/server/repositories/settings-repository";
 
 export default async function AdminSettingsPage() {
-  await requirePermission("settings:manage");
+  await requirePagePermission("settings:manage");
 
   const settings = await getSettings();
   const socialLinks = (settings.socialLinks ?? {}) as Record<string, string>;

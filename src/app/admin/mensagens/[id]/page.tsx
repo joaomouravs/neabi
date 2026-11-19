@@ -12,7 +12,7 @@ import { contactStatusLabels, contactStatusTone } from "@/config/catalog";
 import { ContactStatus } from "@/generated/prisma/enums";
 import { formatDateTime } from "@/lib/date";
 import { prisma } from "@/lib/prisma";
-import { requirePermission } from "@/server/auth/session";
+import { requirePagePermission } from "@/server/auth/session";
 import { can } from "@/server/permissions/rbac";
 import {
   findContactMessageById,
@@ -22,7 +22,7 @@ import {
 type Params = Promise<{ id: string }>;
 
 export default async function AdminContactMessagePage({ params }: { params: Params }) {
-  const [{ id }, actor] = await Promise.all([params, requirePermission("contact:read")]);
+  const [{ id }, actor] = await Promise.all([params, requirePagePermission("contact:read")]);
 
   const message = await findContactMessageById(id);
   if (!message) notFound();

@@ -21,7 +21,7 @@ import { BookStatus, CatalogingStatus, CopyStatus } from "@/generated/prisma/enu
 import { formatDate } from "@/lib/date";
 import { prisma } from "@/lib/prisma";
 import { escapeLike, normalizeText } from "@/lib/text";
-import { requirePermission } from "@/server/auth/session";
+import { requirePagePermission } from "@/server/auth/session";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -37,7 +37,7 @@ export default async function AdminBooksPage({
 }: {
   searchParams: SearchParams;
 }) {
-  await requirePermission("book:read:any");
+  await requirePagePermission("book:read:any");
 
   const params = await searchParams;
   const single = (key: string): string | undefined => {

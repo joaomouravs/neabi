@@ -17,7 +17,7 @@ import { contactStatusLabels, contactStatusTone } from "@/config/catalog";
 import { ContactStatus } from "@/generated/prisma/enums";
 import { formatDateTime } from "@/lib/date";
 import { cn } from "@/lib/utils";
-import { requirePermission } from "@/server/auth/session";
+import { requirePagePermission } from "@/server/auth/session";
 import {
   countContactMessagesByStatus,
   listContactMessagesForAdmin,
@@ -39,7 +39,7 @@ export default async function AdminContactMessagesPage({
 }: {
   searchParams: SearchParams;
 }) {
-  await requirePermission("contact:read");
+  await requirePagePermission("contact:read");
 
   const raw = await searchParams;
   const flat = Object.fromEntries(

@@ -1,3 +1,4 @@
+import { forbidden, redirect } from "next/navigation";
 import { cache } from "react";
 
 import { ForbiddenError, UnauthenticatedError } from "@/server/errors";
@@ -48,5 +49,30 @@ export async function requireAnyPermission(
   if (!permissions.some((permission) => can(actor, permission))) {
     throw new ForbiddenError();
   }
+  return actor;
+}
+
+/**
+ * Versões para **páginas**.
+ *
+ * `requirePermission` lança `ForbiddenError`, que as Server Actions convertem
+ * em mensagem. Numa página, esse erro caía no limite de erro: quem edita o
+ * acervo e abria, por um link salvo, uma área exclusiva da administração via
+ * "Algo deu errado" com status 500. Aqui a negação usa `forbidden()` — página
+ * de acesso negado e status 403 de verdade.
+ */
+export async function requirePagePermission(permission: Permission): Promise<Actor> {
+  const actor = await getActor();
+  if (!actor) redirect("/login");
+  if (!can(actor, permission)) forbidden();
+  return actor;
+}
+
+export async function requireAnyPagePermission(
+  permissions: readonly Permission[],
+): Promise<Actor> {
+  const actor = await getActor();
+  if (!actor) redirect("/login");
+  if (!permissions.some((permission) => can(actor, permission))) forbidden();
   return actor;
 }

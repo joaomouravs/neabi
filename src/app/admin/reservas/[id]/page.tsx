@@ -10,7 +10,7 @@ import { ReservationTimeline } from "@/components/reservations/reservation-timel
 import { patronTypeLabels, shiftLabels } from "@/config/catalog";
 import { formatDate, formatDateTime, formatLongDate } from "@/lib/date";
 import { prisma } from "@/lib/prisma";
-import { requirePermission } from "@/server/auth/session";
+import { requirePagePermission } from "@/server/auth/session";
 import { emailDeliveryEnabled } from "@/server/notifications";
 import { findReservationById } from "@/server/repositories/reservation-repository";
 
@@ -23,7 +23,7 @@ export default async function AdminReservationDetailPage({
 }) {
   const [{ id }] = await Promise.all([
     params,
-    requirePermission("reservation:read:any"),
+    requirePagePermission("reservation:read:any"),
   ]);
 
   const reservation = await findReservationById(id);
