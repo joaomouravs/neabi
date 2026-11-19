@@ -71,7 +71,9 @@ export function computeAvailability(
 
 /**
  * Texto curto de disponibilidade física, usado no card e na página da obra.
- * Distingue "sem exemplar no acervo" de "exemplar existe, mas está em uso".
+ * Distingue "sem exemplar no acervo", "em uso" (reservado ou em consulta) e
+ * "indisponível" (manutenção, extravio): dizer "em uso" de um livro em
+ * manutenção faria a pessoa achar que basta esperar a devolução.
  */
 export function physicalAvailabilityLabel(availability: Availability): string {
   if (!availability.hasPhysicalCopies) return "Sem exemplar físico cadastrado";
@@ -80,7 +82,9 @@ export function physicalAvailabilityLabel(availability: Availability): string {
       ? "Exemplar físico disponível"
       : `${availability.availableCopies} exemplares disponíveis`;
   }
-  return "Exemplar físico em uso";
+  return availability.committedCopies > 0
+    ? "Exemplar físico em uso"
+    : "Exemplar físico indisponível no momento";
 }
 
 export function digitalAvailabilityLabel(availability: Availability): string {

@@ -81,6 +81,14 @@ describe("BookCard", () => {
     expect(screen.queryByText("Exemplar disponível")).not.toBeInTheDocument();
   });
 
+  it("não chama de \"em uso\" um exemplar em manutenção", () => {
+    render(
+      <BookCard book={buildBook({ copies: [{ status: "MAINTENANCE" }], _count: { copies: 0 } })} />,
+    );
+    expect(screen.getByText("Indisponível no momento")).toBeInTheDocument();
+    expect(screen.queryByText("Exemplar em uso")).not.toBeInTheDocument();
+  });
+
   it("distingue obra sem exemplar físico de exemplar em uso", () => {
     render(<BookCard book={buildBook({ copies: [], _count: { copies: 0 } })} />);
     expect(screen.getByText("Sem exemplar físico")).toBeInTheDocument();
@@ -136,7 +144,8 @@ describe("texto de disponibilidade", () => {
   });
 
   it("nunca afirma disponibilidade sem exemplar livre", () => {
-    expect(availabilityText(0, 2)).toBe("Exemplar em uso");
+    expect(availabilityText(0, 2, 1)).toBe("Exemplar em uso");
+    expect(availabilityText(0, 2)).toBe("Indisponível no momento");
     expect(availabilityText(0, 0)).toBe("Sem exemplar físico");
   });
 });

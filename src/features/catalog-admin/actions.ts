@@ -22,6 +22,7 @@ import {
   updateCategorySchema,
   updatePhysicalCopySchema,
 } from "@/validators/book";
+import { audit } from "@/server/logger";
 import { revalidatePublicPages } from "@/server/revalidate";
 
 /**
@@ -37,7 +38,7 @@ export async function createCopyAction(
   formData: FormData,
 ): Promise<ActionResult<{ id: string }>> {
   try {
-    await requirePermission("copy:manage");
+    const actor = await requirePermission("copy:manage");
 
     const parsed = physicalCopySchema.safeParse({
       bookId: formData.get("bookId"),
@@ -89,6 +90,13 @@ export async function createCopyAction(
       select: { id: true },
     });
 
+    audit("acervo.exemplar_criado", {
+      bookId: book.id,
+      copyId: copy.id,
+      codigo: code,
+      para: parsed.data.status,
+      actorId: actor.id,
+    });
     revalidateCopies(book.id);
     return actionOk(copy);
   } catch (error) {
@@ -101,7 +109,7 @@ export async function updateCopyAction(
   formData: FormData,
 ): Promise<ActionResult<undefined>> {
   try {
-    await requirePermission("copy:manage");
+    const actor = await requirePermission("copy:manage");
 
     const parsed = updatePhysicalCopySchema.safeParse({
       id: formData.get("id"),
@@ -170,6 +178,16 @@ export async function updateCopyAction(
       },
     });
 
+    // A situação é o que muda a disponibilidade pública — e o que importa
+    // saber depois ("quem marcou este exemplar como extraviado?").
+    audit("acervo.exemplar_alterado", {
+      bookId: copy.book.id,
+      copyId: copy.id,
+      codigo: parsed.data.code || copy.code,
+      de: copy.status,
+      para: parsed.data.status,
+      actorId: actor.id,
+    });
     revalidateCopies(copy.book.id);
     return actionOk();
   } catch (error) {
@@ -182,7 +200,7 @@ export async function deleteCopyAction(
   formData: FormData,
 ): Promise<ActionResult<undefined>> {
   try {
-    await requirePermission("copy:manage");
+    const actor = await requirePermission("copy:manage");
 
     const id = String(formData.get("id") ?? "");
     if (!id) throw new ValidationError("Exemplar não identificado.");
@@ -191,6 +209,7 @@ export async function deleteCopyAction(
       where: { id },
       select: {
         id: true,
+        code: true,
         book: { select: { id: true, slug: true } },
         _count: { select: { reservations: true } },
       },
@@ -204,6 +223,11 @@ export async function deleteCopyAction(
     }
 
     await prisma.physicalCopy.delete({ where: { id } });
+    audit("acervo.exemplar_removido", {
+      bookId: copy.book.id,
+      codigo: copy.code,
+      actorId: actor.id,
+    });
     revalidateCopies(copy.book.id);
     return actionOk();
   } catch (error) {
@@ -227,7 +251,7 @@ export async function createCategoryAction(
   formData: FormData,
 ): Promise<ActionResult<{ id: string }>> {
   try {
-    await requirePermission("category:manage");
+    const actor = await requirePermission("category:manage");
 
     const parsed = categorySchema.safeParse({
       name: formData.get("name"),
@@ -261,6 +285,7 @@ export async function createCategoryAction(
       select: { id: true },
     });
 
+    audit("acervo.categoria_criada", { nome: parsed.data.name, actorId: actor.id });
     revalidateCategories();
     return actionOk(category);
   } catch (error) {
@@ -273,7 +298,7 @@ export async function updateCategoryAction(
   formData: FormData,
 ): Promise<ActionResult<undefined>> {
   try {
-    await requirePermission("category:manage");
+    const actor = await requirePermission("category:manage");
 
     const parsed = updateCategorySchema.safeParse({
       id: formData.get("id"),
@@ -308,6 +333,7 @@ export async function updateCategoryAction(
       },
     });
 
+    audit("acervo.categoria_alterada", { nome: parsed.data.name, actorId: actor.id });
     revalidateCategories();
     return actionOk();
   } catch (error) {
@@ -320,14 +346,14 @@ export async function deleteCategoryAction(
   formData: FormData,
 ): Promise<ActionResult<undefined>> {
   try {
-    await requirePermission("category:manage");
+    const actor = await requirePermission("category:manage");
 
     const id = String(formData.get("id") ?? "");
     if (!id) throw new ValidationError("Categoria não identificada.");
 
     const category = await prisma.category.findUnique({
       where: { id },
-      select: { id: true, _count: { select: { books: true } } },
+      select: { id: true, name: true, _count: { select: { books: true } } },
     });
     if (!category) throw new NotFoundError("Categoria não encontrada.");
 
@@ -338,6 +364,7 @@ export async function deleteCategoryAction(
     }
 
     await prisma.category.delete({ where: { id } });
+    audit("acervo.categoria_removida", { nome: category.name, actorId: actor.id });
     revalidateCategories();
     return actionOk();
   } catch (error) {

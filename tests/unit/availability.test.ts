@@ -54,6 +54,10 @@ describe("disponibilidade física", () => {
     const emUso = computeAvailability([{ status: CopyStatus.IN_USE }]);
     expect(emUso.hasPhysicalCopies).toBe(true);
     expect(physicalAvailabilityLabel(emUso)).toBe("Exemplar físico em uso");
+
+    // Manutenção ou extravio: não há devolução para esperar.
+    const emManutencao = computeAvailability([{ status: CopyStatus.MAINTENANCE }]);
+    expect(physicalAvailabilityLabel(emManutencao)).toBe("Exemplar físico indisponível no momento");
   });
 
   it("usa singular e plural corretamente", () => {

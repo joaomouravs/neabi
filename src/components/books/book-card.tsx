@@ -48,6 +48,8 @@ export function BookCard({
   const availableCopies = book._count.copies;
   // Registros montados fora do repositório (testes) podem não trazer a lista.
   const totalCopies = book.copies?.length ?? availableCopies;
+  const committedCopies =
+    book.copies?.filter((copy) => copy.status === "RESERVED" || copy.status === "IN_USE").length ?? 0;
   const Heading = `h${headingLevel}` as const;
 
   return (
@@ -155,6 +157,7 @@ export function BookCard({
           <AvailabilityStatus
             available={availableCopies}
             total={totalCopies}
+            committed={committedCopies}
             digital={book.digitalAvailable}
           />
           <span
@@ -176,21 +179,26 @@ export function BookCard({
 }
 
 /** Texto de disponibilidade física a partir da contagem de exemplares. */
-export function availabilityText(available: number, total: number): string {
+export function availabilityText(available: number, total: number, committed = 0): string {
   if (available > 0) {
     return available === 1 ? "Exemplar disponível" : `${available} exemplares disponíveis`;
   }
-  if (total > 0) return "Exemplar em uso";
+  // "Em uso" só quando alguém está com o exemplar (reservado ou em consulta);
+  // manutenção e extravio não têm devolução para esperar.
+  if (committed > 0) return "Exemplar em uso";
+  if (total > 0) return "Indisponível no momento";
   return "Sem exemplar físico";
 }
 
 function AvailabilityStatus({
   available,
   total,
+  committed,
   digital,
 }: {
   available: number;
   total: number;
+  committed: number;
   digital: boolean;
 }) {
   return (
@@ -204,7 +212,7 @@ function AvailabilityStatus({
           )}
         />
         <span className={available > 0 ? "text-neabi-green-700" : "text-ink-600"}>
-          {availabilityText(available, total)}
+          {availabilityText(available, total, committed)}
         </span>
       </span>
       {digital ? (

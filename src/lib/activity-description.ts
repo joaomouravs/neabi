@@ -1,4 +1,4 @@
-import { contactStatusLabels, roleLabels } from "@/config/catalog";
+import { contactStatusLabels, copyStatusLabels, roleLabels } from "@/config/catalog";
 
 /**
  * Frase legível para cada evento do registro de atividades.
@@ -20,6 +20,8 @@ const BOOK_STATUS_LABELS: Record<string, string> = {
 const CONTACT_STATUS_LABELS: Record<string, string> = Object.fromEntries(
   Object.entries(contactStatusLabels).map(([key, label]) => [key, label.toLowerCase()]),
 );
+
+const COPY_STATUS_LABELS: Record<string, string> = copyStatusLabels;
 
 export interface ActivityLookups {
   books: Map<string, string>;
@@ -60,6 +62,27 @@ export function describeActivity(
     }
     case "acervo.obra_removida":
       return { text: `Excluiu a obra ${str("titulo") ? `“${str("titulo")}”` : "(título não registrado)"}` };
+    case "acervo.exemplar_criado":
+      return withBook(`Cadastrou o exemplar ${str("codigo") ?? ""} de ${book}`.replace("  ", " "));
+    case "acervo.exemplar_alterado": {
+      const de = str("de");
+      const para = str("para");
+      const codigo = str("codigo") ?? "";
+      if (de && para && de !== para) {
+        return withBook(
+          `Exemplar ${codigo} de ${book}: ${COPY_STATUS_LABELS[de] ?? de} → ${COPY_STATUS_LABELS[para] ?? para}`,
+        );
+      }
+      return withBook(`Editou o exemplar ${codigo} de ${book}`);
+    }
+    case "acervo.exemplar_removido":
+      return withBook(`Excluiu o exemplar ${str("codigo") ?? ""} de ${book}`.replace("  ", " "));
+    case "acervo.categoria_criada":
+      return { text: `Criou a categoria “${str("nome") ?? ""}”` };
+    case "acervo.categoria_alterada":
+      return { text: `Editou a categoria “${str("nome") ?? ""}”` };
+    case "acervo.categoria_removida":
+      return { text: `Excluiu a categoria “${str("nome") ?? ""}”` };
     case "acervo.capa_removida":
       return withBook(`Removeu a capa de ${book}`);
     case "arquivo.enviado":

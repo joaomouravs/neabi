@@ -74,4 +74,21 @@ describe("describeActivity", () => {
       "Enviou a capa de “Negra Sou!”",
     );
   });
+
+  it("descreve a mudança de situação de um exemplar", () => {
+    expect(
+      describeActivity(
+        "acervo.exemplar_alterado",
+        { bookId: "livro-1", codigo: "NEGRASOU-001", de: "AVAILABLE", para: "MAINTENANCE" },
+        lookups,
+      ).text,
+    ).toBe("Exemplar NEGRASOU-001 de “Negra Sou!”: Disponível → Em manutenção");
+    expect(
+      describeActivity(
+        "acervo.exemplar_alterado",
+        { bookId: "livro-1", codigo: "NEGRASOU-001", de: "AVAILABLE", para: "AVAILABLE" },
+        lookups,
+      ).text,
+    ).toBe("Editou o exemplar NEGRASOU-001 de “Negra Sou!”");
+  });
 });
