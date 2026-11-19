@@ -59,7 +59,8 @@ export const MAX_DOCUMENT_BYTES = 60 * 1024 * 1024; // 60 MB
  * Teto imposto pela hospedagem, e não pelo produto.
  *
  * Funções da Vercel recusam requisições e respostas acima de 4,5 MB antes de o
- * código rodar. O upload passa por Server Action e a entrega pela rota
+ * código rodar, e as da Netlify, acima de 6 MB (com o corpo binário codificado
+ * em base64, o que sobra para o arquivo é menos que isso). O upload passa por Server Action e a entrega pela rota
  * `/api/arquivos`, então os dois sentidos esbarram nele: sem este teto, uma
  * foto de 6 MB tirada no celular falharia com um erro genérico da plataforma.
  * Os 4 MB deixam folga para o envelope multipart e os demais campos.
@@ -76,7 +77,9 @@ export interface UploadLimits {
 
 /** Limites efetivos no ambiente atual — os mesmos no formulário e no servidor. */
 export function uploadLimits(): UploadLimits {
-  if (!process.env.VERCEL) {
+  // `NEABI_HOSPEDAGEM` é fixada no build por `next.config.ts`: a Netlify só
+  // expõe `NETLIFY` durante o build, não nas funções.
+  if (!process.env.VERCEL && !process.env.NEABI_HOSPEDAGEM) {
     return { image: MAX_IMAGE_BYTES, document: MAX_DOCUMENT_BYTES };
   }
   return {
@@ -445,6 +448,65 @@ class S3StorageProvider implements StorageProvider {
   }
 }
 
+/**
+ * Netlify Blobs — o armazenamento da hospedagem na Netlify.
+ *
+ * Não existe URL pública: o conteúdo só sai pela rota `/api/arquivos`, que
+ * confere a autorização — a mesma garantia da store privada da Vercel. Dentro
+ * de uma função da Netlify o SDK se configura sozinho; fora dela (local, CI),
+ * `getStore` falha, e por isso este driver só é usado em produção.
+ *
+ * `consistency: "strong"`: a capa recém-enviada precisa aparecer na pré-
+ * visualização logo em seguida, sem esperar a propagação eventual.
+ */
+class NetlifyBlobsStorageProvider implements StorageProvider {
+  private readonly publicBase: string;
+
+  constructor() {
+    this.publicBase = env().NEXT_PUBLIC_STORAGE_BASE_URL.replace(/\/+$/, "");
+  }
+
+  private async store() {
+    const { getStore } = await import("@netlify/blobs");
+    return getStore({ name: "neabi-arquivos", consistency: "strong" });
+  }
+
+  async upload({ folder, file }: { folder: string; file: File }) {
+    const key = buildStorageKey(folder, file.type);
+    const store = await this.store();
+    await store.set(key, await file.arrayBuffer(), {
+      metadata: { contentType: file.type },
+    });
+    return {
+      key,
+      fileName: sanitizeDisplayName(file.name),
+      mimeType: file.type,
+      size: file.size,
+    };
+  }
+
+  async delete(key: string): Promise<void> {
+    const store = await this.store();
+    // Remoção de arquivo já ausente não é erro: o efeito desejado é o mesmo.
+    await store.delete(key).catch(() => undefined);
+  }
+
+  async read(key: string): Promise<Buffer | null> {
+    try {
+      const store = await this.store();
+      const data = await store.get(key, { type: "arrayBuffer" });
+      return data ? Buffer.from(data) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  getUrl(key: string): string {
+    if (key.startsWith("/") || key.startsWith("http")) return key;
+    return `${this.publicBase}/${key}`;
+  }
+}
+
 let provider: StorageProvider | null = null;
 
 export function getStorage(): StorageProvider {
@@ -455,7 +517,9 @@ export function getStorage(): StorageProvider {
       ? new S3StorageProvider()
       : driver === "blob"
         ? new VercelBlobStorageProvider()
-        : new LocalStorageProvider();
+        : driver === "netlify"
+          ? new NetlifyBlobsStorageProvider()
+          : new LocalStorageProvider();
   return provider;
 }
 

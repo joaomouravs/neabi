@@ -9,7 +9,7 @@ consulta presencial com fluxo de aprovação, painel administrativo e
 armazenamento de arquivos.
 
 [![CI](https://github.com/joaomouravs/neabi/actions/workflows/ci.yml/badge.svg)](https://github.com/joaomouravs/neabi/actions/workflows/ci.yml)
-· **No ar:** https://neabi-alpha.vercel.app
+· Hospedagem: **Netlify** (em migração desde 19/11/2026 — ver [Hospedagem na Netlify](#hospedagem-na-netlify))
 
 ![Página inicial da Biblioteca NEABI-NI com a busca no acervo e obras em destaque](docs/img/inicio.jpg)
 
@@ -70,6 +70,7 @@ the center, so it stays in Portuguese.
 - [E-mail](#e-mail)
 - [Testes](#testes)
 - [Build e deploy](#build-e-deploy)
+- [Hospedagem na Netlify](#hospedagem-na-netlify)
 - [Páginas estáticas e cota da hospedagem](#páginas-estáticas-e-cota-da-hospedagem)
 - [Rotas](#rotas)
 - [Segurança](#segurança)
@@ -442,6 +443,8 @@ Contas criadas pelo seed (desenvolvimento):
 `StorageProvider` (`src/server/storage/`) abstrai o destino dos arquivos:
 
 - **`local`** (padrão): grava em `storage/uploads/`, **fora de `public/`**;
+- **`netlify`**: Netlify Blobs — a opção da hospedagem atual; dentro das
+  funções da Netlify o SDK se configura sozinho, sem chave;
 - **`blob`**: Vercel Blob — a opção para quem hospeda na Vercel;
 - **`s3`**: qualquer serviço compatível — Cloudflare R2, Amazon S3, MinIO,
   Supabase Storage.
@@ -619,18 +622,46 @@ Checklist de produção:
 
 1. `DATABASE_URL` apontando para o PostgreSQL gerenciado;
 2. `AUTH_SECRET` gerado com entropia real e `AUTH_URL` com o domínio público;
-3. migrações aplicadas — na Vercel, o próprio build de **produção** roda
+3. migrações aplicadas — na Netlify (`CONTEXT=production`) e na Vercel
+   (`VERCEL_ENV=production`), o próprio build de **produção** roda
    `prisma migrate deploy` (`scripts/migrate-on-deploy.mjs`) pela conexão
-   direta (`DIRECT_URL`, ou `DATABASE_URL_UNPOOLED` da integração Neon) e
-   falha se não houver uma válida; preview e build local não tocam o banco.
-   Fora da Vercel, `npm run db:migrate`. Nunca `db:push` em produção;
+   direta (`DIRECT_URL`) e falha se não houver uma válida; deploy preview,
+   branch deploy e build local não tocam o banco. Em outra hospedagem,
+   `npm run db:migrate`. Nunca `db:push` em produção;
 4. `SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD` definidos antes do `db:seed`;
-5. `STORAGE_DRIVER="blob"` (Vercel) ou `"s3"`, sempre com armazenamento
-   **privado** e credenciais configuradas;
+5. `STORAGE_DRIVER="netlify"` (Netlify), `"blob"` (Vercel) ou `"s3"`, sempre
+   com armazenamento **privado**;
 6. `MAIL_DRIVER="smtp"` configurado;
 7. as fotografias das capas em `public/acervo/capas/`;
 8. opcionalmente, `prisma/sql/search-indexes.sql` aplicado;
 9. contas de exemplo desativadas.
+
+## Hospedagem na Netlify
+
+Em 19/11/2026 a hospedagem passou da Vercel para a Netlify, e o banco, do Neon
+contratado pela integração da Vercel para uma **conta própria da Neon**: o
+banco antigo também estourou a cota em 17/11 e ficou inacessível. Os dados
+voltaram do backup de 16/11 (21 obras, 21 exemplares, 3 contas, nenhuma
+reserva), pelo workflow de restauração do repositório de backup.
+
+| Peça | Onde |
+|---|---|
+| Site e funções | Netlify, time próprio da Biblioteca (plano Free), adaptador oficial de Next.js detectado no build |
+| Banco | Neon, conta própria, Postgres 18, região AWS `us-east-2` (Ohio) — a mesma das funções da Netlify (`cmh`) |
+| Arquivos enviados | Netlify Blobs, store `neabi-arquivos` (`STORAGE_DRIVER="netlify"`) |
+| Expiração diária | Função agendada `netlify/functions/expirar-reservas.mjs` (09:00 UTC) |
+| Variáveis | `scripts/preparar-env-netlify.mjs` — gera os segredos e importa sem exibi-los |
+
+**Plano Free, com limite rígido.** São 300 créditos por mês para o time; ao
+acabarem, **o site é pausado** até o mês seguinte, como aconteceu na Vercel.
+Custos que importam aqui: cada **deploy de produção custa 15 créditos** (deploy
+preview e branch deploy são gratuitos), 10 mil requisições custam 2 — inclusive
+de arquivos estáticos — e 1 GB transferido custa 20. Por isso a Biblioteca fica
+num time só dela: um site que esgote os créditos não derruba outro.
+
+Na prática: agrupe mudanças antes de publicar em `main`, teste em branch
+(deploy gratuito) e acompanhe o consumo em *Team settings → Usage*. Se o uso
+crescer, o plano Personal tem recarga automática em vez de pausa.
 
 ## Páginas estáticas e cota da hospedagem
 
@@ -722,10 +753,10 @@ apenas se parece com um erro de permissão.
 | `GET`/`POST /api/manutencao/expirar-reservas` | Expira reservas com prazo vencido e devolve os exemplares ao acervo. Exige `Authorization: Bearer $CRON_SECRET` |
 
 Sem essa rotina, um exemplar reservado por alguém que nunca apareceu ficaria
-indisponível para sempre. Na Vercel ela é agendada em `vercel.json` (todo dia
-às 09:00 UTC, 06:00 em Nova Iguaçu — antes do atendimento): a Vercel Cron faz
-`GET` e envia o `CRON_SECRET` do projeto no cabeçalho por conta própria. Fora
-da Vercel, qualquer agendador serve:
+indisponível para sempre. Na Netlify ela é a função agendada
+`netlify/functions/expirar-reservas.mjs` (todo dia às 09:00 UTC, 06:00 em Nova
+Iguaçu — antes do atendimento), que chama a rota com o `CRON_SECRET`. Em
+outra hospedagem, qualquer agendador serve:
 
 ```bash
 curl -X POST https://<host>/api/manutencao/expirar-reservas \

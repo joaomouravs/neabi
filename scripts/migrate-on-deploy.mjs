@@ -6,8 +6,9 @@
  * catálogo passaram um mês respondendo 500 em produção, consultando a coluna
  * `Book.sortTitle` que nenhuma migração tinha criado.
  *
- * Só age quando a Vercel constrói o ambiente de produção. Preview e build local
- * passam direto: um branch em revisão não pode alterar o banco real, e quem
+ * Só age no build de produção — da Netlify (`CONTEXT=production`) ou da Vercel
+ * (`VERCEL_ENV=production`). Deploy preview, branch deploy e build local passam
+ * direto: um branch em revisão não pode alterar o banco real, e quem
  * desenvolve aplica as migrações com `npm run db:migrate`.
  *
  * Migração exige conexão direta — o pooler do Neon não sustenta DDL. A ordem
@@ -21,10 +22,18 @@
  */
 import { spawnSync } from "node:child_process";
 
-if (process.env.VERCEL_ENV !== "production") {
-  console.log(
-    `[migrate-on-deploy] ambiente "${process.env.VERCEL_ENV ?? "local"}": migrações não aplicadas.`,
-  );
+const ambiente =
+  process.env.NETLIFY === "true"
+    ? `netlify:${process.env.CONTEXT ?? "?"}`
+    : process.env.VERCEL
+      ? `vercel:${process.env.VERCEL_ENV ?? "?"}`
+      : "local";
+const producao =
+  (process.env.NETLIFY === "true" && process.env.CONTEXT === "production") ||
+  process.env.VERCEL_ENV === "production";
+
+if (!producao) {
+  console.log(`[migrate-on-deploy] ambiente "${ambiente}": migrações não aplicadas.`);
   process.exit(0);
 }
 

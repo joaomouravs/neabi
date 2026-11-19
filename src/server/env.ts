@@ -62,7 +62,7 @@ const baseSchema = z.object({
   // ---------------------------------------------------------------------------
   // Armazenamento
   // ---------------------------------------------------------------------------
-  STORAGE_DRIVER: z.enum(["local", "s3", "blob"]).default("local"),
+  STORAGE_DRIVER: z.enum(["local", "s3", "blob", "netlify"]).default("local"),
   STORAGE_LOCAL_DIR: z.string().trim().default("storage/uploads"),
   NEXT_PUBLIC_STORAGE_BASE_URL: z.string().trim().default("/api/arquivos"),
 

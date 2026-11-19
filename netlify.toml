@@ -1,0 +1,18 @@
+# Hospedagem na Netlify.
+#
+# O adaptador oficial de Next.js (OpenNext) é detectado e instalado pela própria
+# Netlify. O `npm run build` aplica as migrações só no contexto de produção
+# (scripts/migrate-on-deploy.mjs), e a expiração diária das reservas é a função
+# agendada em netlify/functions/.
+#
+# No plano gratuito cada deploy de produção custa 15 dos 300 créditos do mês;
+# deploy previews e branch deploys não são cobrados.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+  # Sem telemetria do Next no build.
+  NEXT_TELEMETRY_DISABLED = "1"

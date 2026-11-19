@@ -46,6 +46,12 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+
+  // A Netlify só informa `NETLIFY` durante o build; as funções não a recebem.
+  // Fixada aqui, chega ao código do servidor — o limite de upload depende dela.
+  env: {
+    NEABI_HOSPEDAGEM: process.env.NETLIFY === "true" ? "netlify" : "",
+  },
   // Anunciar o framework em todo cabeçalho só ajuda quem procura alvo.
   poweredByHeader: false,
 

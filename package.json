@@ -29,6 +29,7 @@
     "@auth/prisma-adapter": "^2.11.3",
     "@aws-sdk/client-s3": "^3.1128.0",
     "@hookform/resolvers": "^5.9.1",
+    "@netlify/blobs": "11.1.9",
     "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
     "@radix-ui/react-accordion": "^1.2.20",
