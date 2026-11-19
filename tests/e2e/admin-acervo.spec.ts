@@ -137,3 +137,19 @@ test("remove a obra criada pelo teste", async ({ page }) => {
   await page.goto(`/admin/acervo?q=${encodeURIComponent(TITLE)}`);
   await expect(page.getByText("Nenhuma obra encontrada")).toBeVisible();
 });
+
+test("a ficha excluída sai do site público, que é estático", async ({ page }) => {
+  // A ficha é gerada uma vez e servida do cache: sem a revalidação feita pela
+  // ação de exclusão, ela continuaria respondendo como se a obra existisse.
+  const response = await page.goto(`/acervo/${SLUG}`);
+  expect(response?.status()).toBe(404);
+});
+
+test("o registro de atividades guarda quem catalogou e quem excluiu", async ({ page }) => {
+  await page.goto("/admin/atividades?grupo=acervo");
+  await expect(page.getByRole("heading", { level: 1, name: "Atividades" })).toBeVisible();
+  await expect(page.getByText(`Excluiu a obra “${TITLE}”`).first()).toBeVisible();
+  // A obra já não existe, então a criação é descrita sem o título — e sem
+  // expor o identificador interno.
+  await expect(page.getByText("Catalogou uma obra").first()).toBeVisible();
+});

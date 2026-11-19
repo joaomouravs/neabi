@@ -190,10 +190,16 @@ export async function deleteBookAction(
     const id = String(formData.get("id") ?? "");
     if (!id) throw new ValidationError("Obra não identificada.");
 
+    // O título é lido antes: depois da exclusão, o registro de atividades é o
+    // único lugar onde a obra ainda pode ser reconhecida.
+    const removed = await prisma.book.findUnique({
+      where: { id },
+      select: { title: true },
+    });
     await deleteBook(id);
     // Exclusão é irreversível: o registro de quem apagou o quê é o único
     // rastro que sobra da obra.
-    audit("acervo.obra_removida", { bookId: id, actorId: actor.id });
+    audit("acervo.obra_removida", { bookId: id, titulo: removed?.title, actorId: actor.id });
     revalidateBook();
   } catch (error) {
     return actionError(error);
@@ -482,7 +488,7 @@ export async function deleteAssetAction(
   formData: FormData,
 ): Promise<ActionResult<undefined>> {
   try {
-    await requirePermission("asset:delete");
+    const actor = await requirePermission("asset:delete");
 
     const assetId = String(formData.get("assetId") ?? "");
     if (!assetId) throw new ValidationError("Arquivo não identificado.");
@@ -519,6 +525,12 @@ export async function deleteAssetAction(
 
     await storage.delete(asset.storageKey);
     await syncDigitalAvailability(asset.bookId);
+    audit("arquivo.removido", {
+      assetId: asset.id,
+      bookId: asset.bookId,
+      kind: asset.kind,
+      actorId: actor.id,
+    });
 
     revalidateBook();
     revalidatePath(`/admin/acervo/${asset.bookId}`);

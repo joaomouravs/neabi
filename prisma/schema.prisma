@@ -139,6 +139,7 @@ model User {
   uploadedAssets      DigitalAsset[]
   views               BookView[]
   searches            SearchEvent[]
+  auditLogs           AuditLog[]           @relation("AuditActor")
 
   @@index([role])
   @@index([createdAt])
@@ -483,6 +484,26 @@ model DigitalAsset {
 // ---------------------------------------------------------------------------
 // Analytics
 // ---------------------------------------------------------------------------
+
+/// Registro persistente das ações administrativas: "quem fez o quê".
+///
+/// O log da hospedagem guarda pouco tempo (uma hora no plano gratuito da
+/// Vercel), então decisões como trocar o papel de uma conta ou autorizar a
+/// leitura digital de um PDF precisam ficar no banco. `details` leva só
+/// identificadores e valores da mudança — nunca nome, e-mail ou senha.
+model AuditLog {
+  id        String   @id @default(cuid())
+  event     String
+  actorId   String?
+  details   Json?
+  createdAt DateTime @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([event, createdAt])
+  @@index([actorId, createdAt])
+}
 
 model BookView {
   id          String   @id @default(cuid())

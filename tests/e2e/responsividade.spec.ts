@@ -53,6 +53,7 @@ const ROTAS_ADMIN = [
   "/admin/usuarios",
   "/admin/arquivos",
   "/admin/analytics",
+  "/admin/atividades",
   "/admin/configuracoes",
 ] as const;
 

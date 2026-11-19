@@ -36,6 +36,7 @@ export const PERMISSIONS = [
   // Plataforma
   "analytics:read",
   "settings:manage",
+  "audit:read", // registro de atividades administrativas
   // Mensagens do formulário de contato
   "contact:read",
   "contact:manage", // triagem: lida, respondida, arquivada
@@ -73,7 +74,8 @@ const EDITOR_PERMISSIONS: readonly Permission[] = [
  * ADMIN recebe todas as permissões. As que o EDITOR não tem são justamente as
  * "configurações críticas": excluir obras definitivamente, autorizar consulta
  * digital de um PDF, alterar papéis de usuários, editar as configurações
- * institucionais e apagar mensagens de contato.
+ * institucionais, apagar mensagens de contato e consultar o registro de
+ * atividades — que mostra o que cada pessoa da equipe fez.
  */
 const ADMIN_PERMISSIONS: readonly Permission[] = [...PERMISSIONS];
 

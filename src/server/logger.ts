@@ -13,6 +13,8 @@
  * depende de quem chama lembrar de omitir.
  */
 
+import { PERSISTED_EVENTS, persistActivity } from "@/server/activity-log";
+
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
 const LEVEL_ORDER: Record<LogLevel | "silent", number> = {
@@ -137,4 +139,9 @@ export type AuditEvent =
 
 export function audit(evento: AuditEvent, contexto?: LogContext): void {
   emitir("info", `audit:${evento}`, contexto);
+  // Ações administrativas também vão para o banco: o log da hospedagem não
+  // guarda o bastante para responder "quem fez isto?" no dia seguinte.
+  if (PERSISTED_EVENTS.has(evento)) {
+    persistActivity(evento, (sanitizar(contexto ?? {}) as LogContext) ?? {});
+  }
 }

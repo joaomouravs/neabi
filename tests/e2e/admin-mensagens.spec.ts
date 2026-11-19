@@ -121,8 +121,19 @@ test.describe("edição", () => {
     // Links que levariam a um 403 não aparecem.
     await expect(menu.getByRole("link", { name: "Usuários" })).toHaveCount(0);
     await expect(menu.getByRole("link", { name: "Configurações" })).toHaveCount(0);
+    await expect(menu.getByRole("link", { name: "Atividades" })).toHaveCount(0);
 
     await page.goto("/admin/mensagens");
     await expect(page.getByRole("heading", { level: 1, name: "Mensagens" })).toBeVisible();
+  });
+
+  test("recebe acesso negado, e não um erro, nas áreas da administração", async ({ page }) => {
+    // Por um link salvo ou digitado: a página deve dizer "sem permissão" com
+    // status 403 — antes, respondia "Algo deu errado" com 500.
+    for (const rota of ["/admin/atividades", "/admin/configuracoes", "/admin/usuarios"]) {
+      const response = await page.goto(rota);
+      expect(response?.status(), rota).toBe(403);
+      await expect(page.getByText("Algo deu errado")).toHaveCount(0);
+    }
   });
 });

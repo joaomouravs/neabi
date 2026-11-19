@@ -7,6 +7,7 @@ import {
   ChartColumn,
   ExternalLink,
   FolderOpen,
+  History,
   LayoutDashboard,
   Library,
   LogOut,
@@ -91,6 +92,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: "Gestão",
     items: [
       { href: "/admin/analytics", label: "Analytics", icon: ChartColumn, permission: "analytics:read" },
+      { href: "/admin/atividades", label: "Atividades", icon: History, permission: "audit:read" },
       {
         href: "/admin/configuracoes",
         label: "Configurações",
