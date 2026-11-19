@@ -45,11 +45,11 @@ type Params = Promise<{ slug: string }>;
 /**
  * A ficha é a mesma para qualquer visitante, então é estática: gerada no
  * build, servida pelo CDN e regenerada quando a equipe altera a obra, um
- * exemplar ou uma reserva (`revalidatePath` nas ações) — com uma hora de
+ * exemplar ou uma reserva (`revalidatePath` nas ações) — com um dia de
  * teto, por segurança. Nada aqui pode ler cookie ou cabeçalho da requisição:
  * isso tornaria a página dinâmica de novo.
  */
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 export async function generateStaticParams() {
   const books = await listAllPublishedSlugs();

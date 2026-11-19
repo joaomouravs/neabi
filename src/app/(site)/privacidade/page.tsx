@@ -5,9 +5,9 @@ import { LegalPage } from "@/components/layout/legal-page";
 
 /**
  * Página estática, servida pelo CDN. As ações do painel que alteram o que ela
- * mostra chamam `revalidatePath`; a hora é só um teto de segurança.
+ * mostra chamam `revalidatePath`; um dia é só um teto de segurança.
  */
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 export const metadata: Metadata = {
   title: "Privacidade",

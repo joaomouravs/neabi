@@ -11,6 +11,9 @@
 [build]
   command = "npm run build"
   publish = ".next"
+  # Produção só é reconstruída quando um commit pede [publicar] — cada deploy
+  # de produção custa 15 créditos. Ver scripts/netlify-ignorar-build.mjs.
+  ignore = "node scripts/netlify-ignorar-build.mjs"
 
 [build.environment]
   NODE_VERSION = "22"

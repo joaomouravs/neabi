@@ -88,7 +88,11 @@ export function BookCard({
             layout === "horizontal"
               ? "96px"
               : layout === "vertical"
-                ? "(min-width: 1280px) 290px, (min-width: 768px) 30vw, 90vw"
+                ? // Trilho de destaques: 72% da tela no celular, 44% até 768px,
+                  // grade de 3 e 4 colunas acima. Declarar mais largura do que
+                  // o cartão ocupa faz o navegador baixar uma imagem maior —
+                  // transferência que, na Netlify, é cobrada em créditos.
+                  "(min-width: 1280px) 290px, (min-width: 1024px) 23vw, (min-width: 768px) 30vw, (min-width: 480px) 44vw, 72vw"
                 : "(min-width: 1280px) 290px, (min-width: 768px) 30vw, (min-width: 480px) 45vw, 88px"
           }
           className="transition-transform duration-500 ease-editorial group-hover:scale-[1.03] motion-reduce:transform-none"

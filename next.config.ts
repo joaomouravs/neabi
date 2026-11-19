@@ -72,8 +72,10 @@ const nextConfig: NextConfig = {
   images: {
     // Formatos modernos com fallback automático.
     formats: ["image/avif", "image/webp"],
-    // Fotografias de capa em proporção 3:4 — larguras suficientes para o grid.
-    deviceSizes: [360, 480, 640, 768, 1024, 1280, 1536],
+    // Fotografias de capa em proporção 3:4. Nenhuma é exibida a mais de ~290
+    // px de CSS; mesmo num celular de densidade 3, 1024 px de largura bastam.
+    // Variantes maiores só aumentariam a transferência, cobrada na Netlify.
+    deviceSizes: [360, 480, 640, 768, 1024],
     imageSizes: [96, 128, 200, 260, 320, 384],
   },
 
