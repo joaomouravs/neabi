@@ -9,7 +9,7 @@ consulta presencial com fluxo de aprovação, painel administrativo e
 armazenamento de arquivos.
 
 [![CI](https://github.com/joaomouravs/neabi/actions/workflows/ci.yml/badge.svg)](https://github.com/joaomouravs/neabi/actions/workflows/ci.yml)
-· Hospedagem: **Netlify** (em migração desde 19/11/2026 — ver [Hospedagem na Netlify](#hospedagem-na-netlify))
+· **No ar:** https://biblioteca-neabi-ni.netlify.app (Netlify — ver [Hospedagem na Netlify](#hospedagem-na-netlify))
 
 ![Página inicial da Biblioteca NEABI-NI com a busca no acervo e obras em destaque](docs/img/inicio.jpg)
 
@@ -646,7 +646,7 @@ reserva), pelo workflow de restauração do repositório de backup.
 
 | Peça | Onde |
 |---|---|
-| Site e funções | Netlify, time próprio da Biblioteca (plano Free), adaptador oficial de Next.js detectado no build |
+| Site e funções | Netlify, site `biblioteca-neabi-ni` (plano Free), adaptador oficial de Next.js (Runtime v5) detectado no build |
 | Banco | Neon, conta própria, Postgres 18, região AWS `us-east-2` (Ohio) — a mesma das funções da Netlify (`cmh`) |
 | Arquivos enviados | Netlify Blobs, store `neabi-arquivos` (`STORAGE_DRIVER="netlify"`) |
 | Expiração diária | Função agendada `netlify/functions/expirar-reservas.mjs` (09:00 UTC) |
@@ -656,12 +656,24 @@ reserva), pelo workflow de restauração do repositório de backup.
 acabarem, **o site é pausado** até o mês seguinte, como aconteceu na Vercel.
 Custos que importam aqui: cada **deploy de produção custa 15 créditos** (deploy
 preview e branch deploy são gratuitos), 10 mil requisições custam 2 — inclusive
-de arquivos estáticos — e 1 GB transferido custa 20. Por isso a Biblioteca fica
-num time só dela: um site que esgote os créditos não derruba outro.
+de arquivos estáticos — e 1 GB transferido custa 20. A Biblioteca fica
+no mesmo time de outro site do mantenedor (a Netlify permite um só time Free
+por pessoa): **os dois dividem os 300 créditos** e são pausados juntos se a
+cota acabar.
 
-Na prática: agrupe mudanças antes de publicar em `main`, teste em branch
-(deploy gratuito) e acompanhe o consumo em *Team settings → Usage*. Se o uso
-crescer, o plano Personal tem recarga automática em vez de pausa.
+Para os créditos durarem:
+
+- **produção só publica com `[publicar]`** na mensagem de um commit
+  (`scripts/netlify-ignorar-build.mjs`); push sem a marca, ou só de
+  documentação e testes, não gera deploy. Teste em branch, que é gratuito;
+- capas com `sizes` fiéis ao tamanho exibido e sem variantes acima de
+  1024 px — a transferência é o maior custo;
+- `robots.txt` bloqueia coletores de treino de IA e ferramentas de SEO;
+- páginas estáticas regeneram no máximo uma vez por dia, além das
+  regenerações imediatas pelas ações do painel.
+
+Acompanhe o consumo em *Team settings → Usage*. Se o uso crescer, o plano
+Personal tem recarga automática em vez de pausa.
 
 ## Páginas estáticas e cota da hospedagem
 
@@ -902,8 +914,8 @@ Itens que dependem de informação institucional e ficaram deliberadamente vazio
     [Backup e restauração](#backup-e-restauração)). Falta decidir quem guarda a
     senha da cifra e se vale contratar um plano pago da Neon (Launch: restauração
     a qualquer instante dos últimos 7 dias e snapshots agendados).
-12. **Domínio** — o site está em `neabi-alpha.vercel.app`. Um endereço
-    institucional exige configuração de DNS pelo CEFET/RJ.
+12. **Domínio** — o site está em `biblioteca-neabi-ni.netlify.app`. Um
+    endereço institucional exige configuração de DNS pelo CEFET/RJ.
 13. **Plano de hospedagem** — o Hobby da Vercel é para uso pessoal e não
     comercial, guarda log por uma hora e bloqueia o projeto ao atingir a cota.
     Para um serviço institucional, o Pro (US$ 20/mês por pessoa da equipe na
