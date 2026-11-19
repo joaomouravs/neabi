@@ -70,11 +70,15 @@ the center, so it stays in Portuguese.
 - [E-mail](#e-mail)
 - [Testes](#testes)
 - [Build e deploy](#build-e-deploy)
+- [Páginas estáticas e cota da hospedagem](#páginas-estáticas-e-cota-da-hospedagem)
 - [Rotas](#rotas)
 - [Segurança](#segurança)
 - [Acessibilidade](#acessibilidade)
 - [Pendências para o NEABI](#pendências-para-o-neabi)
 - [Licença](#licença)
+
+> **Equipe do NEABI:** o guia de uso do painel, sem detalhes técnicos, está em
+> [`docs/manual-da-equipe.md`](docs/manual-da-equipe.md).
 
 ---
 
@@ -628,6 +632,53 @@ Checklist de produção:
 8. opcionalmente, `prisma/sql/search-indexes.sql` aplicado;
 9. contas de exemplo desativadas.
 
+## Páginas estáticas e cota da hospedagem
+
+Em **17/11/2026 a Vercel desativou o projeto** (`402 DEPLOYMENT_DISABLED`) por
+estourar a cota mensal de **CPU ativa** do plano Hobby (`FAIR_USE_LIMITS_EXCEEDED`,
+tipo `fluidCpuDuration`), com desbloqueio automático só em 17/12. Um acervo de
+21 obras não deveria chegar perto dessa cota. A causa estava na arquitetura e
+foi medida com o build de produção:
+
+- **Toda página era dinâmica.** O layout do site lia a sessão (cookie), e isso
+  obrigava o servidor a renderizar cada página a cada acesso — inclusive Sobre
+  e Privacidade, que são texto fixo.
+- **O prefetch multiplicava cada visita.** Em produção, o `<Link>` do Next
+  pré-carrega toda rota cujo link aparece na tela. Uma visita à página inicial
+  disparava **40** renderizações no servidor; ao catálogo, **47**; à ficha de
+  uma obra, **45**. Robôs que executam JavaScript multiplicavam do mesmo jeito.
+- **O catálogo era uma armadilha para rastreadores**: cada filtro é um link
+  que soma um parâmetro à URL, e o `robots.txt` permitia todas as combinações.
+- Efeito colateral nos dados: a ficha contava uma "visualização" a cada
+  renderização, então **cada prefetch contava como leitura** — "Mais acessados"
+  e as estatísticas estão inflados até essa data.
+
+O que mudou:
+
+| Antes | Agora |
+|---|---|
+| Layout lê a sessão no servidor | O cabeçalho pergunta a `/api/sessao` pelo navegador, uma vez por carregamento |
+| Todas as páginas dinâmicas | Início, fichas das obras, Sobre, Contato, Acessibilidade e Privacidade são **estáticas** (ISR), servidas pelo CDN |
+| Prefetch automático em todo link | `src/components/ui/link.tsx` desliga o prefetch; o ESLint proíbe importar `next/link` direto |
+| Visualização contada na renderização | Contada pelo navegador em `/api/visualizacoes`, ignorando robôs e recargas em 30 min |
+| `robots.txt` liberava o catálogo filtrado | Bloqueia `/acervo?`, reserva e leitor; o sitemap lista as obras uma a uma |
+
+Medição na mesma visita simulada: prefetches que viram função **40 → 0** (início),
+**47 → 0** (catálogo), **45 → 0** (ficha); uma página estática lida por um robô
+passou de ~30 ms de CPU para nada na função (resposta do CDN).
+
+**Regra para quem mexer no código:** uma página pública não pode ler cookie,
+cabeçalho ou sessão ao renderizar — isso a torna dinâmica de novo. O que
+depende de quem está conectado vai para o cliente (`useSessionState`). Toda
+ação que muda o que o site público mostra chama `revalidatePublicPages()`
+(`src/server/revalidate.ts`). O `npm run build` mostra na tabela de rotas
+quais páginas são `○`/`●` (estáticas) e quais são `ƒ` (dinâmicas).
+
+**Defesa contra robôs que ignoram o `robots.txt`**: o catálogo filtrado
+continua dinâmico (~70 ms de CPU por acesso). O passo seguinte é uma regra do
+**Firewall da Vercel** — requisições bloqueadas ali não executam função — e,
+se o tráfego justificar, o plano Pro (ver Pendências).
+
 `experimental.authInterrupts` está habilitado em `next.config.ts` para que
 `forbidden()` responda com status HTTP 403 real, em vez de uma página 200 que
 apenas se parece com um erro de permissão.
@@ -658,13 +709,15 @@ apenas se parece com um erro de permissão.
 `/admin/exemplares` · `/admin/categorias` · `/admin/reservas` ·
 `/admin/reservas/[id]` · `/admin/mensagens` · `/admin/mensagens/[id]` ·
 `/admin/usuarios` · `/admin/arquivos` ·
-`/admin/analytics` · `/admin/configuracoes`
+`/admin/analytics` · `/admin/atividades` · `/admin/configuracoes`
 
 **Rotas de serviço**
 
 | Rota | Descrição |
 |---|---|
 | `GET /api/arquivos/[...key]` | Entrega de arquivos com verificação de autorização |
+| `GET /api/sessao` | Quem está conectado, para o cabeçalho das páginas estáticas (`private, no-store`) |
+| `POST /api/visualizacoes` | Conta a leitura de uma ficha; ignora robôs e recargas (responde sempre 204) |
 | `POST /api/auth/[...nextauth]` | Auth.js |
 | `GET`/`POST /api/manutencao/expirar-reservas` | Expira reservas com prazo vencido e devolve os exemplares ao acervo. Exige `Authorization: Bearer $CRON_SECRET` |
 
@@ -721,9 +774,18 @@ depende de quem chama lembrar de omitir.
 
 Eventos de auditoria (`audit:*`) respondem "quem fez o quê": login e falha de
 login, criação de conta, troca de papel e de ativação, criação e transição de
-reserva, alterações no acervo, envio e autorização de arquivos, e mudança de
-configurações. Registram o identificador de quem agiu — nunca nome, e-mail ou
-senha.
+reserva, alterações no acervo, envio, exclusão e autorização de arquivos, e
+mudança de configurações. Registram o identificador de quem agiu — nunca nome,
+e-mail ou senha.
+
+O log da hospedagem guarda **uma hora** no plano Hobby, o que não basta para
+responder "quem promoveu esta conta?" no dia seguinte. Por isso as **ações
+administrativas** também são gravadas na tabela `AuditLog` e consultadas em
+`/admin/atividades` (só Administração). Ficam de fora login e falha de login,
+que robôs geram aos milhares, e as reservas, que já têm histórico próprio com
+quem fez cada mudança. A gravação roda depois da resposta (`after()`) e nunca
+desfaz a ação se falhar; os campos sensíveis são redigidos antes, pela mesma
+regra do log (`src/server/activity-log.ts`).
 
 > A limitação de taxa é em memória, por processo — adequada a uma instância. Na
 > Vercel, cada instância da função tem a sua própria contagem, então o limite
@@ -746,9 +808,14 @@ senha.
   elimina. O Auth.js ainda exige a série 8, então não há versão corrigida que
   mantenha a árvore válida. Atualize quando o `next-auth` aceitar uma série
   sem alertas.
-- **`zod` 4.1.11** dentro de `@vercel/cli-config`, dependência de
-  configuração da CLI da Vercel. A validação da aplicação usa o `zod` 4.6.7
-  da raiz.
+O alerta do **`zod` < 4.6.6** (consumo de memória com coleções enormes) vinha
+de uma cópia fixada em 4.1.11 por `@vercel/cli-config`, puxado por
+`@vercel/blob` → `@vercel/oidc` — nenhuma versão do `@vercel/oidc` 3.x usa a
+correção. Um `overrides` no `package.json` faz esse pacote usar o `zod` da raiz.
+
+O **Next.js** está em 16.4.6: a 16.4.5 corrigiu sete alertas de segurança
+moderados (cache de `use cache`, otimização de imagem SVG, cookie `HttpOnly`
+em rotas Edge) que o `npm audit` ainda não listava em 19/11/2026.
 
 ## Acessibilidade
 
@@ -806,6 +873,14 @@ Itens que dependem de informação institucional e ficaram deliberadamente vazio
     a qualquer instante dos últimos 7 dias e snapshots agendados).
 12. **Domínio** — o site está em `neabi-alpha.vercel.app`. Um endereço
     institucional exige configuração de DNS pelo CEFET/RJ.
+13. **Plano de hospedagem** — o Hobby da Vercel é para uso pessoal e não
+    comercial, guarda log por uma hora e bloqueia o projeto ao atingir a cota.
+    Para um serviço institucional, o Pro (US$ 20/mês por pessoa da equipe na
+    Vercel) traz cota maior, cobrança do excedente em vez de bloqueio, logs por
+    mais tempo e Observability. É decisão de custo do NEABI.
+14. **Retenção do registro de atividades** — `AuditLog` guarda o
+    identificador de quem agiu. Defina por quanto tempo manter (sugestão: dois
+    anos) e inclua na política de privacidade.
 
 ## Licença
 
