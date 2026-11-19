@@ -110,7 +110,12 @@ export default async function AdminActivityPage({
                     {/* No celular as colunas "Quem" e "Quando" ficam fora da
                         vista: o essencial da auditoria vem junto da ação. */}
                     <p className="mt-0.5 text-[0.75rem] text-ink-500 md:hidden">
-                      {item.actor ? (item.actor.name ?? item.actor.email) : "Conta removida"} ·{" "}
+                      {item.actor
+                        ? (item.actor.name ?? item.actor.email)
+                        : item.details.via === "script"
+                          ? "Script de manutenção"
+                          : "Conta removida"}{" "}
+                      ·{" "}
                       {formatDateTime(item.createdAt)}
                     </p>
                     {description.bookId ? (
@@ -130,7 +135,11 @@ export default async function AdminActivityPage({
                         ) : null}
                       </>
                     ) : (
-                      <span className="text-ink-500">Conta removida</span>
+                      // Sem autor: ação de um script de manutenção, ou de uma
+                      // conta que já foi excluída.
+                      <span className="text-ink-500">
+                        {item.details.via === "script" ? "Script de manutenção" : "Conta removida"}
+                      </span>
                     )}
                   </Td>
                   <Td className="whitespace-nowrap text-[0.8125rem] text-ink-500">
