@@ -30,7 +30,10 @@ import {
  * cria e remove seus próprios registros, identificados pelo prefixo abaixo.
  */
 
-const PREFIX = "teste-integracao";
+// Prefixo próprio: a limpeza apaga tudo que começa com ele, e "teste-integracao"
+// também casava com as contas dos testes de sessão e de atividades, que rodam
+// em paralelo — um arquivo apagava a conta do outro no meio do teste.
+const PREFIX = "teste-reservas";
 
 let bookId: string;
 let requesterOne: Actor;
