@@ -63,6 +63,10 @@ ou o e-mail cadastrado no perfil da pessoa.
 
 *Acervo → Nova obra.*
 
+> **As 21 obras do acervo inicial** estão todas com revisão pendente. O guia
+> [Revisão bibliográfica](revisao-bibliografica.md) diz, obra por obra, o que
+> conferir na folha de rosto e na ficha catalográfica do exemplar.
+
 - **Preencha só o que está confirmado.** Ano, ISBN, editora, páginas e
   autoria que você não conseguiu conferir ficam **em branco**. O site omite o
   campo em vez de mostrar um palpite, e a obra fica marcada como *revisão

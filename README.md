@@ -880,8 +880,12 @@ Itens que dependem de informação institucional e ficaram deliberadamente vazio
 4. **Regras de atendimento** — dias, turnos, antecedência mínima, janela de
    agendamento, prazo de retirada e limite de reservas por pessoa começam com
    valores conservadores e devem ser ajustados às normas reais do núcleo.
-5. **Dados bibliográficos** — as 21 obras estão como `NEEDS_REVIEW`. Ano, ISBN,
-   editora e paginação devem ser conferidos na ficha catalográfica e
+5. **Dados bibliográficos** — as 21 obras estão como `NEEDS_REVIEW`. A revisão
+   de 24/11/2026 ([docs/revisao-bibliografica.md](docs/revisao-bibliografica.md))
+   cadastrou o que estava impresso nas capas e ainda faltava (migração
+   `20261124130000_revisao_das_capas`) e lista, obra por obra, o que os
+   catálogos externos dizem e o que conferir. Ano, ISBN e paginação continuam
+   vazios até serem lidos na ficha catalográfica de cada exemplar e
    preenchidos em `/admin/acervo`.
 6. **Números de tombo e localização** dos exemplares.
 7. **Autoria não identificada** — algumas obras (Cadernos PENESB 1, Orientações

@@ -153,6 +153,8 @@ export const SEED_BOOKS: SeedBook[] = [
     slug: "vozes-negras-no-servico-publico",
     title: "Vozes Negras no Serviço Público",
     subtitle: "Memórias e Narrativas Transatlânticas",
+    publisher: "Enap",
+    institution: "Ministério da Igualdade Racial",
     materialType: "BOOK",
     catalogingStatus: "NEEDS_REVIEW",
     contributors: [],
@@ -166,6 +168,7 @@ export const SEED_BOOKS: SeedBook[] = [
   {
     slug: "etnopesquisa-critica-e-etnopesquisa-formacao",
     title: "Etnopesquisa Crítica e Etnopesquisa-Formação",
+    publisher: "Liber Livro",
     collection: "Série Pesquisa 15",
     materialType: "BOOK",
     catalogingStatus: "NEEDS_REVIEW",
@@ -202,7 +205,7 @@ export const SEED_BOOKS: SeedBook[] = [
     publisher: "Appris",
     materialType: "BOOK",
     catalogingStatus: "NEEDS_REVIEW",
-    contributors: [{ name: "Janaina de Azevedo Corenza", role: "AUTHOR" }],
+    contributors: [{ name: "Janaína de Azevedo Corenza", role: "AUTHOR" }],
     categories: ["educacao", "relacoes-etnico-raciais"],
     subjects: ["Formação de Professores"],
   },
@@ -210,6 +213,7 @@ export const SEED_BOOKS: SeedBook[] = [
     slug: "relacoes-etnico-raciais-e-educacao-no-brasil",
     title: "Relações Étnico-Raciais e Educação no Brasil",
     publisher: "Mazza Edições",
+    collection: "Pensar a Educação, Pensar o Brasil — Série Seminários",
     materialType: "BOOK",
     catalogingStatus: "NEEDS_REVIEW",
     contributors: [
@@ -229,13 +233,25 @@ export const SEED_BOOKS: SeedBook[] = [
     publisher: "EdUFF",
     materialType: "RESEARCH",
     catalogingStatus: "NEEDS_REVIEW",
-    // A capa apresenta outros colaboradores além dos organizadores principais;
-    // eles serão cadastrados quando a ficha completa for conferida.
+    // Colaboradores na ordem impressa na capa (revisão de 24/11/2026).
     notes:
-      "A capa apresenta colaboradores adicionais além dos organizadores registrados. Conferir a ficha catalográfica.",
+      'Colaboradores cadastrados conforme a capa. Conferir na ficha catalográfica a grafia "Mária da Anunciação Silva", impressa com acento.',
     contributors: [
       { name: "André Augusto P. Brandão", role: "ORGANIZER" },
       { name: "Moema De Poli Teixeira", role: "ORGANIZER" },
+      { name: "Iolanda de Oliveira", role: "CONTRIBUTOR" },
+      { name: "Sérgio da Rocha Souza", role: "CONTRIBUTOR" },
+      { name: "Márcia Maria de J. Pessanha", role: "CONTRIBUTOR" },
+      { name: "Maria Lúcia Muller", role: "CONTRIBUTOR" },
+      { name: "Mária da Anunciação Silva", role: "CONTRIBUTOR" },
+      { name: "Rosângela Saldanha Pereira", role: "CONTRIBUTOR" },
+      { name: "Acildo Leite da Silva", role: "CONTRIBUTOR" },
+      { name: "Maria Aparecida Aiza", role: "CONTRIBUTOR" },
+      { name: "Teresa Josefa Cruz dos Santos", role: "CONTRIBUTOR" },
+      { name: "Suely Dulce de Castilho", role: "CONTRIBUTOR" },
+      { name: "Victor Hugo Gouvea", role: "CONTRIBUTOR" },
+      { name: "Victor Hugo Klagsbrun", role: "CONTRIBUTOR" },
+      { name: "Denise Lopes Salles", role: "CONTRIBUTOR" },
     ],
     categories: ["pesquisa", "relacoes-etnico-raciais"],
     subjects: ["Ensino Superior", "Dados e Indicadores"],
@@ -244,6 +260,7 @@ export const SEED_BOOKS: SeedBook[] = [
     slug: "cadernos-penesb-1-relacoes-raciais-e-educacao",
     title: "Cadernos PENESB 1",
     subtitle: "Relações raciais e educação: alguns determinantes",
+    publisher: "Intertexto",
     materialType: "ACADEMIC_PUBLICATION",
     catalogingStatus: "NEEDS_REVIEW",
     contributors: [],
@@ -289,6 +306,7 @@ export const SEED_BOOKS: SeedBook[] = [
   {
     slug: "negra-sou",
     title: "Negra Sou!",
+    publisher: "Editora Jandaíra",
     materialType: "BOOK",
     catalogingStatus: "NEEDS_REVIEW",
     contributors: [
@@ -338,6 +356,7 @@ export const SEED_BOOKS: SeedBook[] = [
     title: "A Transversalidade de Gênero e Raça nas Políticas Públicas",
     subtitle: "Limites e possibilidades",
     institution: "Universidade de Brasília",
+    collection: "Gestão de Políticas Públicas em Gênero e Raça",
     materialType: "BOOK",
     catalogingStatus: "NEEDS_REVIEW",
     contributors: [
