@@ -7,8 +7,9 @@ import {
   contactSchema,
   contactStatusUpdateSchema,
 } from "@/validators/contact";
-import { loginSchema, registerSchema } from "@/validators/auth";
+import { deleteAccountSchema, loginSchema, registerSchema } from "@/validators/auth";
 import { reservationFormSchema } from "@/validators/reservation";
+import { settingsSchema } from "@/validators/settings";
 
 /**
  * Schemas de validação.
@@ -272,5 +273,39 @@ describe("contato", () => {
       contactStatusUpdateSchema.safeParse({ messageId: "", status: "READ" })
         .success,
     ).toBe(false);
+  });
+});
+
+describe("deleteAccountSchema", () => {
+  it("exige a senha e a confirmação marcada", () => {
+    expect(deleteAccountSchema.safeParse({ password: "x", confirmation: true }).success).toBe(true);
+    expect(deleteAccountSchema.safeParse({ password: "", confirmation: true }).success).toBe(false);
+    expect(deleteAccountSchema.safeParse({ password: "x", confirmation: false }).success).toBe(false);
+  });
+});
+
+describe("settingsSchema — proteção de dados", () => {
+  const base = {
+    libraryName: "Biblioteca",
+    institution: "CEFET/RJ",
+    campus: "Nova Iguaçu",
+    serviceDays: ["1"],
+    availableShifts: [Shift.MORNING],
+    reservationLeadDays: "1",
+    reservationHorizonDays: "60",
+    pickupDeadlineDays: "3",
+    maxActiveReservations: "3",
+  };
+
+  it("aceita os campos em branco, que simplesmente não aparecem no site", () => {
+    const parsed = settingsSchema.parse({ ...base, dpoEmail: "" });
+    expect(parsed.dataController).toBe("");
+    expect(parsed.dpoEmail).toBe("");
+  });
+
+  it("recusa e-mail do encarregado inválido", () => {
+    const parsed = settingsSchema.safeParse({ ...base, dpoEmail: "nao-e-email" });
+    expect(parsed.success).toBe(false);
+    expect(parsed.error?.issues[0].path[0]).toBe("dpoEmail");
   });
 });

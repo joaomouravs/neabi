@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "@/components/ui/link";
 
 import { LegalPage } from "@/components/layout/legal-page";
+import { getSettings } from "@/server/repositories/settings-repository";
 
 /**
  * Página estática, servida pelo CDN. As ações do painel que alteram o que ela
@@ -18,16 +19,57 @@ export const metadata: Metadata = {
 /**
  * Descreve o funcionamento real do sistema — cada item corresponde a um
  * modelo de dados existente. Nenhum prazo ou compromisso jurídico é inventado
- * aqui: esses são definidos pela instituição.
+ * aqui: esses são definidos pela instituição e preenchidos em Painel →
+ * Configurações → Proteção de dados. Enquanto estiverem em branco, as seções
+ * correspondentes simplesmente não aparecem.
  */
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const settings = await getSettings();
+  const hasResponsible = Boolean(settings.dataController || settings.dpoName || settings.dpoEmail);
+  const retention = settings.dataRetention
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
   return (
     <LegalPage
       eyebrow="Transparência"
       title="Privacidade"
       description="O que a Biblioteca NEABI-NI registra quando você consulta o acervo, cria uma conta ou solicita uma reserva — e para quê."
-      updated="setembro de 2026"
+      updated="novembro de 2026"
       sections={[
+        ...(hasResponsible
+          ? [
+              {
+                id: "responsaveis",
+                title: "Quem responde pelos dados",
+                content: (
+                  <ul>
+                    {settings.dataController ? (
+                      <li>
+                        <strong>Controlador:</strong> {settings.dataController}
+                      </li>
+                    ) : null}
+                    {settings.dpoName || settings.dpoEmail ? (
+                      <li>
+                        <strong>Encarregado pelo tratamento de dados (DPO):</strong>{" "}
+                        {settings.dpoName}
+                        {settings.dpoName && settings.dpoEmail ? " — " : null}
+                        {settings.dpoEmail ? (
+                          <a
+                            href={`mailto:${settings.dpoEmail}`}
+                            className="link-underline font-medium text-ink-900"
+                          >
+                            {settings.dpoEmail}
+                          </a>
+                        ) : null}
+                      </li>
+                    ) : null}
+                  </ul>
+                ),
+              },
+            ]
+          : []),
         {
           id: "sem-conta",
           title: "Consultar o acervo sem conta",
@@ -96,22 +138,59 @@ export default function PrivacyPage() {
             </p>
           ),
         },
+        ...(retention.length > 0
+          ? [
+              {
+                id: "guarda",
+                title: "Por quanto tempo os dados ficam guardados",
+                content: (
+                  <>
+                    {retention.map((paragraph, index) => (
+                      <p key={index}>{paragraph}</p>
+                    ))}
+                  </>
+                ),
+              },
+            ]
+          : []),
         {
           id: "direitos",
-          title: "Correção e exclusão de dados",
+          title: "Acesso, correção e exclusão",
           content: (
-            <p>
-              Nome, telefone, vínculo e matrícula podem ser alterados em{" "}
-              <Link href="/minha-conta/perfil" className="link-underline font-medium text-ink-900">
-                Minha conta
-              </Link>
-              . Para outras solicitações — como exclusão da conta ou dúvidas sobre o
-              tratamento dos dados —, escreva pelo{" "}
-              <Link href="/contato" className="link-underline font-medium text-ink-900">
-                formulário de contato
-              </Link>
-              . O tratamento de dados segue também as normas institucionais do CEFET/RJ.
-            </p>
+            <>
+              <p>
+                Em{" "}
+                <Link href="/minha-conta/perfil" className="link-underline font-medium text-ink-900">
+                  Minha conta → Perfil
+                </Link>
+                , você pode:
+              </p>
+              <ul>
+                <li>alterar nome, telefone, vínculo e matrícula;</li>
+                <li>
+                  <strong>baixar uma cópia</strong> de tudo o que a Biblioteca guarda
+                  associado à sua conta, num arquivo que pode ser aberto em qualquer
+                  computador;
+                </li>
+                <li>
+                  <strong>excluir a conta</strong>. Nome, e-mail, telefone, vínculo e
+                  matrícula são apagados da conta e das reservas, as reservas em
+                  andamento são canceladas e as mensagens enviadas pelo contato são
+                  apagadas. Fica apenas o registro anônimo de que uma obra foi
+                  reservada em determinada data, usado nas estatísticas do acervo.
+                </li>
+              </ul>
+              <p>
+                Quem está com um exemplar retirado precisa devolvê-lo antes de excluir
+                a conta. Para outras solicitações ou dúvidas sobre o tratamento dos
+                dados, escreva pelo{" "}
+                <Link href="/contato" className="link-underline font-medium text-ink-900">
+                  formulário de contato
+                </Link>
+                . O tratamento de dados segue também as normas institucionais do{" "}
+                {settings.institution}.
+              </p>
+            </>
           ),
         },
       ]}

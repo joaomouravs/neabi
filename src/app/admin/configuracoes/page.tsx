@@ -33,6 +33,10 @@ export default async function AdminSettingsPage() {
             maxActiveReservations: settings.maxActiveReservations,
             reservationInstructions: settings.reservationInstructions,
             socialLinks,
+            dataController: settings.dataController,
+            dpoName: settings.dpoName,
+            dpoEmail: settings.dpoEmail,
+            dataRetention: settings.dataRetention,
           }}
         />
 

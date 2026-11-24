@@ -136,19 +136,22 @@ export default async function AdminReservationDetailPage({
                 { label: "Matrícula", value: reservation.registrationId },
                 {
                   label: "E-mail",
-                  value: (
+                  value: reservation.email ? (
                     <a
                       href={`mailto:${reservation.email}`}
                       className="underline underline-offset-4"
                     >
                       {reservation.email}
                     </a>
-                  ),
+                  ) : null,
                 },
-                { label: "Telefone", value: reservation.phone },
+                { label: "Telefone", value: reservation.phone || null },
                 {
                   label: "Conta",
-                  value: (
+                  // Excluída pelo titular: não há mais conta para abrir.
+                  value: reservation.user.deletedAt ? (
+                    "Excluída pelo titular"
+                  ) : (
                     <Link
                       href={`/admin/usuarios?q=${encodeURIComponent(reservation.user.email)}`}
                       className="underline underline-offset-4"

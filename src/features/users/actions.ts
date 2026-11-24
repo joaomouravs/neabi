@@ -57,8 +57,8 @@ export async function changeUserRoleAction(
       );
     }
 
-    const target = await prisma.user.findUnique({
-      where: { id: parsed.data.userId },
+    const target = await prisma.user.findFirst({
+      where: { id: parsed.data.userId, deletedAt: null },
       select: { id: true, role: true },
     });
     if (!target) throw new NotFoundError("Usuário não encontrado.");
@@ -108,8 +108,8 @@ export async function setUserActiveAction(
       throw new ConflictError("Você não pode desativar a própria conta.");
     }
 
-    const target = await prisma.user.findUnique({
-      where: { id: userId },
+    const target = await prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
       select: { id: true, role: true },
     });
     if (!target) throw new NotFoundError("Usuário não encontrado.");
@@ -186,8 +186,8 @@ export async function resetUserPasswordAction(
       );
     }
 
-    const target = await prisma.user.findUnique({
-      where: { id: parsed.data.userId },
+    const target = await prisma.user.findFirst({
+      where: { id: parsed.data.userId, deletedAt: null },
       select: { id: true, active: true },
     });
     if (!target) throw new NotFoundError("Usuário não encontrado.");

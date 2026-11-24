@@ -56,6 +56,13 @@ export const settingsSchema = z.object({
 
   reservationInstructions: z.string().trim().max(4000).default(""),
   socialLinks: socialLinksSchema.default({}),
+
+  dataController: z.string().trim().max(300).default(""),
+  dpoName: z.string().trim().max(160).default(""),
+  dpoEmail: z
+    .union([z.email({ error: "Informe um e-mail válido para o encarregado." }), z.literal("")])
+    .default(""),
+  dataRetention: z.string().trim().max(4000).default(""),
 });
 
 export type SettingsInput = z.infer<typeof settingsSchema>;

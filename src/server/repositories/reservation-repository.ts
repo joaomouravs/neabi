@@ -38,7 +38,7 @@ export const reservationDetailSelect = {
   returnedAt: true,
   cancelledAt: true,
   userId: true,
-  user: { select: { id: true, name: true, email: true } },
+  user: { select: { id: true, name: true, email: true, deletedAt: true } },
   approvedBy: { select: { id: true, name: true } },
   history: {
     select: {

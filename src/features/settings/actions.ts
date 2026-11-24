@@ -53,6 +53,10 @@ export async function updateSettingsAction(
         x: formData.get("x") ?? "",
         site: formData.get("site") ?? "",
       },
+      dataController: formData.get("dataController") ?? "",
+      dpoName: formData.get("dpoName") ?? "",
+      dpoEmail: String(formData.get("dpoEmail") ?? "").trim(),
+      dataRetention: formData.get("dataRetention") ?? "",
     });
 
     if (!parsed.success) {
@@ -81,6 +85,10 @@ export async function updateSettingsAction(
       maxActiveReservations: parsed.data.maxActiveReservations,
       reservationInstructions: parsed.data.reservationInstructions,
       socialLinks,
+      dataController: parsed.data.dataController,
+      dpoName: parsed.data.dpoName,
+      dpoEmail: parsed.data.dpoEmail,
+      dataRetention: parsed.data.dataRetention,
     });
 
     // As configurações aparecem no rodapé de todas as páginas.

@@ -120,6 +120,7 @@ export type AuditEvent =
   | "conta.senha_redefinida"
   | "conta.papel_alterado"
   | "conta.ativacao_alterada"
+  | "conta.excluida"
   | "reserva.criada"
   | "reserva.transicao"
   | "acervo.obra_criada"

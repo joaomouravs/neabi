@@ -146,6 +146,15 @@ encaminha por e-mail. Um selo no menu mostra quantas são novas.
   protocolo (onde retirar, documento a apresentar etc.).
 - **E-mail**: mostra se o envio está ligado e permite mandar um teste para a
   sua própria conta.
+- **Proteção de dados (LGPD)**: controlador, encarregado (DPO) e prazos de
+  guarda, que aparecem na página de Privacidade. Preencha só com o que o setor
+  responsável do CEFET/RJ confirmar; em branco, não aparecem.
+
+Quem tem conta de leitor pode, em *Minha conta → Perfil*, baixar uma cópia
+dos próprios dados e excluir a conta. Na exclusão, as reservas em andamento
+são canceladas (o exemplar volta a ficar disponível) e, no painel, a reserva
+passa a mostrar "Titular excluído". Quem estiver com um exemplar retirado só
+consegue excluir depois de devolvê-lo.
 
 Alterações nas configurações e no acervo aparecem no site **na hora**.
 
@@ -170,7 +179,7 @@ na linha do tempo da própria reserva.
 | A disponibilidade parece errada | Confira a situação dos exemplares em *Exemplares*. |
 | Envio de arquivo recusado | Confira o tipo (capa em JPG, PNG, WebP ou AVIF; documento em PDF) e o tamanho (até 4 MB). |
 | Alguém não consegue entrar | Confira se a conta está ativa; se for senha, use *Redefinir senha*. |
-| E-mails não chegam | O envio ainda não foi ligado: as notificações só aparecem em *Minhas reservas*. |
+| E-mails não chegam | Use *Configurações → E-mail → Enviar e-mail de teste* e leve a mensagem de erro a quem cuida da hospedagem (§10). As notificações continuam em *Minhas reservas*. |
 
 ---
 

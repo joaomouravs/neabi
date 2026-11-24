@@ -29,9 +29,11 @@ export default async function AdminUsersPage({
   const term = (single("q") ?? "").trim();
   const page = Math.max(1, Number(single("page") ?? 1) || 1);
 
+  // Contas excluídas pelo titular não têm mais dado nenhum para gerir.
   const where: Prisma.UserWhereInput =
     term.length > 0
       ? {
+          deletedAt: null,
           OR: [
             { name: { contains: escapeLike(term), mode: "insensitive" } },
             { email: { contains: escapeLike(term), mode: "insensitive" } },
@@ -43,7 +45,7 @@ export default async function AdminUsersPage({
             },
           ],
         }
-      : {};
+      : { deletedAt: null };
 
   const [users, total] = await Promise.all([
     prisma.user.findMany({

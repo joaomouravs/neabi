@@ -59,3 +59,10 @@ export const changePasswordSchema = z
     path: ["passwordConfirmation"],
     error: "As senhas não coincidem.",
   });
+
+export const deleteAccountSchema = z.object({
+  password: z.string().min(1, "Informe a sua senha para confirmar."),
+  confirmation: z.literal(true, {
+    error: "Marque a caixa para confirmar que entende o que será apagado.",
+  }),
+});

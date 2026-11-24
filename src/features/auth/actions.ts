@@ -11,6 +11,8 @@ import {
   LOGIN_ACCOUNT_SCOPE,
 } from "@/server/auth/config";
 import { requireActor } from "@/server/auth/session";
+import { revalidatePublicPages } from "@/server/revalidate";
+import { deleteOwnAccount } from "@/server/services/account-service";
 import {
   actionError,
   actionOk,
@@ -26,6 +28,7 @@ import {
 } from "@/server/rate-limit";
 import {
   changePasswordSchema,
+  deleteAccountSchema,
   loginSchema,
   profileSchema,
   registerSchema,
@@ -266,6 +269,51 @@ export async function changePasswordAction(
   } catch (error) {
     return actionError(error);
   }
+}
+
+/**
+ * Exclusão da conta pelo próprio titular.
+ *
+ * A senha é pedida de novo: uma sessão esquecida aberta num computador do
+ * laboratório não pode bastar para apagar a conta de alguém. Depois de excluir,
+ * a sessão é encerrada aqui mesmo — o `jwt` já recusaria a próxima leitura,
+ * mas a pessoa não deve ver a área da conta nem por um instante.
+ */
+export async function deleteAccountAction(
+  _previous: unknown,
+  formData: FormData,
+): Promise<ActionResult<undefined>> {
+  try {
+    const actor = await requireActor();
+
+    const parsed = deleteAccountSchema.safeParse({
+      password: formData.get("password") ?? "",
+      confirmation: formData.get("confirmation") === "on",
+    });
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      throw new ValidationError(issue.message, String(issue.path[0] ?? ""));
+    }
+
+    enforceRateLimit({
+      action: "delete-account",
+      subject: actor.id,
+      limit: 5,
+      windowMs: 15 * 60 * 1000,
+    });
+
+    await deleteOwnAccount(actor, { password: parsed.data.password });
+
+    // Exemplares liberados mudam a disponibilidade exibida no site público.
+    revalidatePublicPages();
+  } catch (error) {
+    return actionError(error);
+  }
+
+  // Fora do `try`: o redirecionamento do Auth.js é lançado como exceção e não
+  // pode ser engolido pelo `actionError`.
+  await signOut({ redirectTo: "/conta-excluida" });
+  return actionOk();
 }
 
 /**

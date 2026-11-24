@@ -28,6 +28,10 @@ export interface SettingsFormDefaults {
   maxActiveReservations: number;
   reservationInstructions: string;
   socialLinks: Record<string, string | undefined>;
+  dataController: string;
+  dpoName: string;
+  dpoEmail: string;
+  dataRetention: string;
 }
 
 /**
@@ -252,6 +256,49 @@ export function SettingsForm({ defaults }: { defaults: SettingsFormDefaults }) {
             name="reservationInstructions"
             defaultValue={defaults.reservationInstructions}
             rows={5}
+            maxLength={4000}
+          />
+        </Field>
+      </fieldset>
+
+      <fieldset className="flex flex-col gap-5 border-t border-border pt-8">
+        <legend className="mb-1 font-display text-lg font-semibold text-ink-900">
+          Proteção de dados (LGPD)
+        </legend>
+        <p className="-mt-3 max-w-prose text-[0.8125rem] leading-relaxed text-ink-600">
+          Aparecem na página de privacidade. São definições da instituição —
+          confirme com o setor responsável do CEFET/RJ antes de preencher. Campos
+          em branco não aparecem no site.
+        </p>
+
+        <Field
+          error={fieldError(state, "dataController")}
+          description="Quem decide sobre o tratamento dos dados. Ex.: nome da instituição e CNPJ."
+        >
+          <FieldLabel>Controlador</FieldLabel>
+          <Input name="dataController" defaultValue={defaults.dataController} maxLength={300} />
+        </Field>
+
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field error={fieldError(state, "dpoName")}>
+            <FieldLabel>Encarregado (DPO)</FieldLabel>
+            <Input name="dpoName" defaultValue={defaults.dpoName} maxLength={160} />
+          </Field>
+          <Field error={fieldError(state, "dpoEmail")}>
+            <FieldLabel>E-mail do encarregado</FieldLabel>
+            <Input name="dpoEmail" type="email" defaultValue={defaults.dpoEmail} maxLength={254} />
+          </Field>
+        </div>
+
+        <Field
+          error={fieldError(state, "dataRetention")}
+          description="Por quanto tempo contas, reservas e mensagens são guardadas. Um parágrafo por linha."
+        >
+          <FieldLabel>Prazos de guarda</FieldLabel>
+          <Textarea
+            name="dataRetention"
+            defaultValue={defaults.dataRetention}
+            rows={4}
             maxLength={4000}
           />
         </Field>

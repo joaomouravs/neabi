@@ -894,17 +894,26 @@ Itens que dependem de informação institucional e ficaram deliberadamente vazio
    [Envio de e-mail pelo Resend](#envio-de-e-mail-pelo-resend)). O plano Free
    envia até 100 e-mails por dia; acima disso, os avisos falham (a reserva
    segue valendo e o erro fica no log).
-10. **LGPD** — a política de privacidade não identifica o controlador, o
-    encarregado (DPO), a base legal nem o prazo de retenção dos dados, porque
-    são definições institucionais. Preencha-os em `/privacidade` com o setor
-    responsável do CEFET/RJ.
+10. **LGPD** — desde 24/11/2026 o titular baixa os próprios dados (JSON, em
+    `/api/minha-conta/dados`) e exclui a conta em *Minha conta → Perfil*. A
+    exclusão não apaga a linha do usuário: remove todo dado pessoal da conta e
+    das cópias guardadas em cada reserva, cancela as reservas em andamento
+    (liberando o exemplar), apaga as mensagens de contato do mesmo e-mail e
+    marca `User.deletedAt`; quem está com exemplar retirado precisa devolvê-lo
+    antes. Contas da equipe não se excluem por aí. O que continua pendente é
+    institucional: controlador, encarregado (DPO) e prazos de guarda — preencha
+    em *Painel → Configurações → Proteção de dados*, com o setor responsável do
+    CEFET/RJ, e eles aparecem em `/privacidade`. A base legal ainda está fora
+    da página.
 11. **Backup** — o backup diário independente está configurado (ver
-    [Backup e restauração](#backup-e-restauração)). Falta decidir quem guarda a
-    senha da cifra e se vale contratar um plano pago da Neon (Launch: restauração
-    a qualquer instante dos últimos 7 dias e snapshots agendados).
+    [Backup e restauração](#backup-e-restauração)). A guarda da senha da cifra
+    foi definida em 24/11/2026 (o responsável técnico). Resta decidir se vale
+    contratar um plano pago da Neon (Launch: restauração a qualquer instante dos
+    últimos 7 dias e snapshots agendados).
 12. **Domínio** — o site está em `neabiufcini.com.br` (Registro.br, titular
-    pessoa física, vence em 19/11/2027). Defina quem renova o domínio e se ele
-    passa para a titularidade da instituição.
+    pessoa física, vence em 19/11/2027). A renovação fica com a coordenação do
+    projeto do NEABI (definido em 24/11/2026); resta decidir se o domínio passa
+    para a titularidade da instituição.
 13. **Plano de hospedagem** — o Hobby da Vercel é para uso pessoal e não
     comercial, guarda log por uma hora e bloqueia o projeto ao atingir a cota.
     Para um serviço institucional, o Pro (US$ 20/mês por pessoa da equipe na

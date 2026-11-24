@@ -32,6 +32,10 @@ const FALLBACK_WRITE: SettingsWriteInput = {
   maxActiveReservations: 3,
   reservationInstructions: "",
   socialLinks: {},
+  dataController: "",
+  dpoName: "",
+  dpoEmail: "",
+  dataRetention: "",
 };
 
 const FALLBACK: Settings = {

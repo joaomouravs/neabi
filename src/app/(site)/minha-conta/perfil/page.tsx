@@ -2,14 +2,18 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { DeleteAccountForm, DownloadDataButton } from "@/components/reservations/account-data";
 import {
   ChangePasswordForm,
   LogoutButton,
   ProfileForm,
 } from "@/components/reservations/profile-forms";
+import Link from "@/components/ui/link";
 import { roleLabels } from "@/config/catalog";
+import { Role } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import { requireActor } from "@/server/auth/session";
+import { ACTIVE_STATUSES } from "@/server/services/reservation-rules";
 
 export const metadata: Metadata = {
   title: "Perfil",
@@ -19,19 +23,24 @@ export const metadata: Metadata = {
 export default async function ProfilePage() {
   const actor = await requireActor();
 
-  const user = await prisma.user.findUnique({
-    where: { id: actor.id },
-    select: {
-      name: true,
-      email: true,
-      phone: true,
-      registrationId: true,
-      patronType: true,
-      role: true,
-      passwordHash: true,
-      createdAt: true,
-    },
-  });
+  const [user, activeReservations] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: actor.id },
+      select: {
+        name: true,
+        email: true,
+        phone: true,
+        registrationId: true,
+        patronType: true,
+        role: true,
+        passwordHash: true,
+        createdAt: true,
+      },
+    }),
+    prisma.reservation.count({
+      where: { userId: actor.id, status: { in: [...ACTIVE_STATUSES] } },
+    }),
+  ]);
 
   if (!user) notFound();
 
@@ -81,6 +90,51 @@ export default async function ProfilePage() {
         </dl>
         <div className="mt-6 border-t border-border pt-5">
           <LogoutButton />
+        </div>
+      </ProfileSection>
+
+      <ProfileSection
+        id="dados-titulo"
+        title="Seus dados"
+        description="Você pode receber uma cópia de tudo o que a Biblioteca guarda sobre você ou excluir a conta."
+      >
+        <div className="flex flex-col gap-8">
+          <div>
+            <h3 className="font-sans text-[0.9375rem] font-semibold text-ink-900">
+              Cópia dos dados
+            </h3>
+            <p className="mt-1.5 mb-4 max-w-prose text-[0.9375rem] leading-relaxed text-ink-700">
+              Um arquivo com o seu cadastro, as reservas e os seus históricos, as
+              mensagens enviadas pelo contato e as buscas feitas com a sessão aberta.
+            </p>
+            <DownloadDataButton />
+          </div>
+
+          <div className="border-t border-border pt-6">
+            <h3 className="font-sans text-[0.9375rem] font-semibold text-ink-900">
+              Excluir a conta
+            </h3>
+            {user.role === Role.MEMBER ? (
+              <>
+                <p className="mt-1.5 mb-4 max-w-prose text-[0.9375rem] leading-relaxed text-ink-700">
+                  Apaga a conta e os seus dados pessoais. Saiba mais na{" "}
+                  <Link href="/privacidade#direitos" className="link-underline font-medium text-ink-900">
+                    política de privacidade
+                  </Link>
+                  .
+                </p>
+                <DeleteAccountForm
+                  hasPassword={Boolean(user.passwordHash)}
+                  activeReservations={activeReservations}
+                />
+              </>
+            ) : (
+              <p className="mt-1.5 max-w-prose text-[0.9375rem] leading-relaxed text-ink-700">
+                Contas da equipe não são excluídas por aqui. Peça a uma pessoa
+                administradora que retire o seu acesso em Painel → Usuários.
+              </p>
+            )}
+          </div>
         </div>
       </ProfileSection>
     </div>
